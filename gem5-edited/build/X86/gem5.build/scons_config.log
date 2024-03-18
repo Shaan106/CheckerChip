@@ -1,0 +1,69 @@
+file /Users/shaanyadav/Desktop/gem5-project/gem5/site_scons/gem5_scons/configure.py,line 171:
+	Configure(confdir = build/X86/gem5.build/scons_config)
+scons: Configure: Checking for linker -Wl,--as-needed support... 
+build/X86/gem5.build/scons_config/conftest_da935ab7a2c376c10f2ce1130ab88c51_0.cc <-
+  |int main(int, char *[]) { return 0; }
+(B[m [     CXX] [33mX86/gem5.build/scons_config/conftest_da935ab7a2c376c10f2ce1130ab88c51_0[33m[1m.cc[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1mX86/gem5.build/scons_config/conftest_da935ab7a2c376c10f2ce1130ab88c51_0_387edc3061c795200c2a94cb37d523d3(B[m
+ld: unknown option: --as-needed
+collect2: error: ld returned 1 exit status
+scons: Configure: no
+
+
+file /Users/shaanyadav/Desktop/gem5-project/gem5/site_scons/gem5_scons/configure.py,line 171:
+	Configure(confdir = build/X86/gem5.build/scons_config)
+
+file /Users/shaanyadav/Desktop/gem5-project/gem5/site_scons/gem5_scons/configure.py,line 171:
+	Configure(confdir = build/X86/gem5.build/scons_config)
+scons: Configure: Checking for compiler -gz support... 
+build/X86/gem5.build/scons_config/conftest_342d5457cbf4639ef3e0d4fb7b8ef89b_0.cc <-
+  |// CheckCxxFlag DO NOTHING
+(B[m [     CXX] [33mX86/gem5.build/scons_config/conftest_342d5457cbf4639ef3e0d4fb7b8ef89b_0[33m[1m.cc[34m[1m -> [33m[1m_5e1fa928a350b9c1429589ef2061cd02.o(B[m
+g++-11: error: -gz is not supported in this configuration
+scons: Configure: no
+
+scons: Configure: Checking for linker -gz support... 
+build/X86/gem5.build/scons_config/conftest_da935ab7a2c376c10f2ce1130ab88c51_1.cc <-
+  |int main(int, char *[]) { return 0; }
+(B[m [     CXX] [33mX86/gem5.build/scons_config/conftest_da935ab7a2c376c10f2ce1130ab88c51_1[33m[1m.cc[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1mX86/gem5.build/scons_config/conftest_da935ab7a2c376c10f2ce1130ab88c51_1_19fafdf98b19ed0b3f28a19fd8b97afd(B[m
+g++-11: error: -gz is not supported in this configuration
+scons: Configure: no
+
+
+file /Users/shaanyadav/Desktop/gem5-project/gem5/site_scons/gem5_scons/configure.py,line 171:
+	Configure(confdir = build/X86/gem5.build/scons_config)
+
+file /Users/shaanyadav/Desktop/gem5-project/gem5/site_scons/gem5_scons/configure.py,line 171:
+	Configure(confdir = build/X86/gem5.build/scons_config)
+scons: Configure: Checking for C header file Python.h... 
+build/X86/gem5.build/scons_config/conftest_6f79fff2b5fa95157216534d203df494_0.c <-
+  |
+  |#include <Python.h>
+  |
+  |
+(B[m [      CC] [33mX86/gem5.build/scons_config/conftest_6f79fff2b5fa95157216534d203df494_0[33m[1m.c[34m[1m -> [33m[1m_7fc05bad98b2d291d94efa4762948230.o(B[m
+scons: Configure: yes
+
+scons: Configure: Checking Python version... 
+build/X86/gem5.build/scons_config/conftest_2176b2d932a60acfa5b4079f6e5ab92b_0.cc <-
+  |
+  |#include <pybind11/embed.h>
+  |
+  |int
+  |main(int argc, char **argv) {
+  |    pybind11::scoped_interpreter guard{};
+  |    pybind11::exec(
+  |        "import sys\n"
+  |        "vi = sys.version_info\n"
+  |        "sys.stdout.write('%i.%i.%i' % (vi.major, vi.minor, vi.micro));\n");
+  |    return 0;
+  |}
+  |    
+(B[m [     CXX] [33mX86/gem5.build/scons_config/conftest_2176b2d932a60acfa5b4079f6e5ab92b_0[33m[1m.cc[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1mX86/gem5.build/scons_config/conftest_2176b2d932a60acfa5b4079f6e5ab92b_0_1071e533083193dd5be55f5a4a602263(B[m
+ld: library not found for -lpython3.9
+collect2: error: ld returned 1 exit status
+scons: Configure: no
+
+
