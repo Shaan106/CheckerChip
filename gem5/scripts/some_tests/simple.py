@@ -54,6 +54,9 @@ process.cmd = [binary]
 system.cpu.workload = process
 system.cpu.createThreads()
 
+#instantiating the system
+root = Root(full_system = False, system = system)
+m5.instantiate()
 
 # running sim!!
 print("Beginning simulation!")
