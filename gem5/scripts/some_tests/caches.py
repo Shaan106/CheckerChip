@@ -1,4 +1,6 @@
+import m5
 from m5.objects import Cache
+
 
 #extending the base cache to create whatever we want
 class L1Cache(Cache):
@@ -10,6 +12,10 @@ class L1Cache(Cache):
     #figure out the implementation a bit more?
     mshrs = 4
     tgts_per_mshr = 20
+    
+    def connectBus(self, bus):
+        """Connect this cache to a memory-side bus"""
+        self.mem_side = bus.cpu_side_ports
 
 #instruction cache
 class L1ICache(L1Cache):
@@ -41,12 +47,3 @@ class L2Cache(Cache):
 
     def connectMemSideBus(self, bus):
       self.mem_side = bus.cpu_side_ports
-
-
-# connecting the defined caches to bigger system
-# def connectCPU(self, cpu):
-#     # need to define this in a base class!
-#     raise NotImplementedError
-
-# def connectBus(self, bus):
-#     self.mem_side = bus.cpu_side_ports
