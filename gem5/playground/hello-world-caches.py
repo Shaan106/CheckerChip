@@ -20,6 +20,10 @@ cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
       l1i_size="32KiB", # inst cache size
       l2_size="64KiB", #l2 cache size
 )
+# for no cache:
+# cache_hierarchy = NoCache()
+
+
 # type of RAM, what size
 memory = SingleChannelDDR3_1600("1GiB")
 
