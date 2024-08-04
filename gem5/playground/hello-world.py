@@ -22,7 +22,7 @@ memory = SingleChannelDDR3_1600("1GiB")
 processor = SimpleProcessor(cpu_type=CPUTypes.TIMING, num_cores=1, isa=ISA.X86)
 # setting ISA not in tutorial, checked actual files to fix.
 
-# setup the board
+# setup the board with all the components
 board = SimpleBoard(clk_freq="3GHz", 
                     processor=processor, 
                     memory=memory,
