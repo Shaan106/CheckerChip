@@ -76,6 +76,10 @@ class U74MiscFU(MinorDefaultMiscFU):
     pass
 
 
+class U74VecFU(MinorDefaultVecFU):
+    pass
+
+
 class U74FUPool(MinorFUPool):
     funcUnits = [
         U74IntFU(),
@@ -87,6 +91,7 @@ class U74FUPool(MinorFUPool):
         U74MemReadFU(),
         U74MemWriteFU(),
         U74MiscFU(),
+        U74VecFU(),
     ]
 
 

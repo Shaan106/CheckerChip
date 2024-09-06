@@ -328,8 +328,8 @@ typedef struct GEM5_PACKED
         };
         uint64_t completionSignal;
     };
-}  PM4MapProcessV2;
-static_assert(sizeof(PM4MapProcessV2) == 80);
+}  PM4MapProcessMI200;
+static_assert(sizeof(PM4MapProcessMI200) == 80);
 
 typedef struct GEM5_PACKED
 {

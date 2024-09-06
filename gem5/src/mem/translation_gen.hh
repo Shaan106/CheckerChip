@@ -33,7 +33,6 @@
 
 #include "base/logging.hh"
 #include "base/types.hh"
-#include "mem/request.hh"
 
 namespace gem5
 {
@@ -72,8 +71,6 @@ class TranslationGen
         Addr size = 0;
 
         Addr paddr = 0;
-        // PTEs can also set the Secure/non-secure bit, so it is stored here.
-        Request::Flags flags = 0;
         Fault fault = NoFault;
     };
 

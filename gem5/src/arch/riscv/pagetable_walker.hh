@@ -46,7 +46,6 @@
 #include "arch/riscv/pma_checker.hh"
 #include "arch/riscv/pmp.hh"
 #include "arch/riscv/tlb.hh"
-#include "base/statistics.hh"
 #include "base/types.hh"
 #include "mem/packet.hh"
 #include "params/RiscvPagetableWalker.hh"
@@ -174,7 +173,7 @@ namespace RiscvISA
         // The TLB we're supposed to load.
         TLB * tlb;
         System * sys;
-        BasePMAChecker * pma;
+        PMAChecker * pma;
         PMP * pmp;
         RequestorID requestorId;
 
@@ -194,16 +193,6 @@ namespace RiscvISA
         void recvReqRetry();
         bool sendTiming(WalkerState * sendingState, PacketPtr pkt);
 
-        struct PagewalkerStats : public statistics::Group
-        {
-            PagewalkerStats(statistics::Group *parent);
-
-            statistics::Scalar num_4kb_walks;
-            statistics::Scalar num_2mb_walks;
-
-        } pagewalkerstats;
-
-
       public:
 
         void setTLB(TLB * _tlb)
@@ -220,8 +209,7 @@ namespace RiscvISA
             pmp(params.pmp),
             requestorId(sys->getRequestorId(this)),
             numSquashable(params.num_squash_per_cycle),
-            startWalkWrapperEvent([this]{ startWalkWrapper(); }, name()),
-            pagewalkerstats(this)
+            startWalkWrapperEvent([this]{ startWalkWrapper(); }, name())
         {
         }
     };

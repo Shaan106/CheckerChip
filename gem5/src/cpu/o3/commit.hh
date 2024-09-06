@@ -167,7 +167,7 @@ class Commit
     void setActiveThreads(std::list<ThreadID> *at_ptr);
 
     /** Sets pointer to the commited state rename map. */
-    void setRenameMap(UnifiedRenameMap::PerThreadUnifiedRenameMap& rm_ptr);
+    void setRenameMap(UnifiedRenameMap rm_ptr[MaxThreads]);
 
     /** Sets pointer to the ROB. */
     void setROB(ROB *rob_ptr);

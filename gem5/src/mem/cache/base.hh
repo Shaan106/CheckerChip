@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2015-2016, 2018-2019, 2023-2024 Arm Limited
+ * Copyright (c) 2012-2013, 2015-2016, 2018-2019, 2023 ARM Limited
  * All rights reserved.
  *
  * The license below extends only to copyright in the software and shall
@@ -83,10 +83,6 @@ namespace gem5
 namespace prefetch
 {
     class Base;
-}
-namespace partitioning_policy
-{
-    class PartitionManager;
 }
 class MSHR;
 class RequestPort;
@@ -354,9 +350,6 @@ class BaseCache : public ClockedObject
 
     /** Compression method being used. */
     compression::Base* compressor;
-
-    /** Partitioning manager */
-    partitioning_policy::PartitionManager* partitionManager;
 
     /** Prefetcher */
     prefetch::Base *prefetcher;

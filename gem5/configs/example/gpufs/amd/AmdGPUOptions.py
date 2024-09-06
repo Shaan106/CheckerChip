@@ -247,9 +247,3 @@ def addAmdGPUOptions(parser):
         default="simple",
         help="register allocation policy (simple/dynamic)",
     )
-    parser.add_argument(
-        "--register-file-cache-size",
-        type=int,
-        default=0,
-        help="number of registers in cache",
-    )

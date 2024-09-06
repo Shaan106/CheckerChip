@@ -47,9 +47,7 @@ class Unknown : public SparcStaticInst
     // Constructor
     Unknown(ExtMachInst _machInst) :
             SparcStaticInst("unknown", _machInst, No_OpClass)
-    {
-        flags[IsInvalid] = true;
-    }
+    {}
 
     Fault
     execute(ExecContext *, trace::InstRecord *) const override

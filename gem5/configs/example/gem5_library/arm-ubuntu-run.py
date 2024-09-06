@@ -102,9 +102,7 @@ board = ArmBoard(
 # Here we set a full system workload. The "arm64-ubuntu-20.04-boot" boots
 # Ubuntu 20.04.
 
-board.set_workload(
-    obtain_resource("arm64-ubuntu-20.04-boot", resource_version="2.0.0")
-)
+board.set_workload(obtain_resource("arm64-ubuntu-20.04-boot"))
 
 # We define the system with the aforementioned system defined.
 

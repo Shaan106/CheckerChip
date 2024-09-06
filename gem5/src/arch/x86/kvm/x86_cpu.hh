@@ -217,8 +217,6 @@ class X86KvmCPU : public BaseKvmCPU
     void updateKvmStateFPUXSave();
     /** Update MSR registers */
     void updateKvmStateMSRs();
-    /** Update XCR registers */
-    void updateKvmStateXCRs();
     /** @} */
 
     /**
@@ -238,8 +236,6 @@ class X86KvmCPU : public BaseKvmCPU
     void updateThreadContextXSave(const struct kvm_xsave &kxsave);
     /** Update MSR registers */
     void updateThreadContextMSRs();
-    /** Update XCR registers */
-    void updateThreadContextXCRs();
     /** @} */
 
     /** Transfer gem5's CPUID values into the virtual CPU. */

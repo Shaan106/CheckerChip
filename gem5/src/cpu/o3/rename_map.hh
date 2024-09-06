@@ -182,8 +182,6 @@ class UnifiedRenameMap
 
     typedef SimpleRenameMap::RenameInfo RenameInfo;
 
-    typedef std::array<UnifiedRenameMap, MaxThreads> PerThreadUnifiedRenameMap;
-
     /** Default constructor.  init() must be called prior to use. */
     UnifiedRenameMap() : regFile(nullptr) {};
 
@@ -268,7 +266,7 @@ class UnifiedRenameMap
      * of registers is requested.
      */
     unsigned
-    minFreeEntries() const
+    numFreeEntries() const
     {
         auto min_free = std::numeric_limits<unsigned>::max();
         for (auto &map: renameMaps) {

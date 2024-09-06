@@ -145,17 +145,7 @@ Options.addFSOptions(parser)
 parser.add_argument(
     "--virtio-rng", action="store_true", help="Enable VirtIORng device"
 )
-parser.add_argument(
-    "--semihosting",
-    action="store_true",
-    help="Enable the RISC-V semihosting interface",
-)
-parser.add_argument(
-    "--semihosting-root",
-    default="/some/invalid/root/directory",
-    type=str,
-    help="The root directory for files exposed to semihosting",
-)
+
 # ---------------------------- Parse Options --------------------------- #
 args = parser.parse_args()
 
@@ -178,17 +168,11 @@ mdesc = SysConfig(
 system.mem_mode = mem_mode
 system.mem_ranges = [AddrRange(start=0x80000000, size=mdesc.mem())]
 
-workload_args = dict()
-if args.semihosting:
-    workload_args["semihosting"] = RiscvSemihosting(
-        files_root_dir=args.semihosting_root,
-        cmd_line=args.kernel,
-    )
 if args.bare_metal:
-    system.workload = RiscvBareMetal(**workload_args)
+    system.workload = RiscvBareMetal()
     system.workload.bootloader = args.kernel
 else:
-    system.workload = RiscvLinux(**workload_args)
+    system.workload = RiscvLinux()
     system.workload.object_file = args.kernel
 
 system.iobus = IOXBar()

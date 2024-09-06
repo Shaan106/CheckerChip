@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2024 Arm Limited
+ * Copyright (c) 2020 ARM Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -61,15 +61,11 @@ class BaseISA : public SimObject
     typedef std::vector<const RegClass *> RegClasses;
 
   protected:
-    BaseISA(const SimObjectParams &p, const std::string &name)
-      : SimObject(p), isaName(name)
-    {}
+    using SimObject::SimObject;
 
     ThreadContext *tc = nullptr;
 
     RegClasses _regClasses;
-
-    std::string isaName;
 
   public:
     virtual PCStateBase *newPCState(Addr new_inst_addr=0) const = 0;
@@ -91,7 +87,6 @@ class BaseISA : public SimObject
     virtual void resetThread() { panic("Thread reset not implemented."); }
 
     const RegClasses &regClasses() const { return _regClasses; }
-    const std::string getIsaName() const { return isaName; }
 
     // Locked memory handling functions.
     virtual void handleLockedRead(const RequestPtr &req) {}
@@ -131,21 +126,6 @@ class BaseISA : public SimObject
     {
         globalClearExclusive();
     }
-
-    void
-    serialize(CheckpointOut &cp) const override
-    {
-        SERIALIZE_SCALAR(isaName);
-    }
-
-    /**
-     * This function returns the vector length of the Vector Length Agnostic
-     * extension of the ISA.
-     * For ARM ISA, this function returns the SVE/SVE2 vector length.
-     * For RISC-V ISA, this function returns the RVV vector length.
-     * For other ISAs, this function returns -1.
-     */
-    virtual int64_t getVectorLengthInBytes() const { return -1; }
 };
 
 } // namespace gem5

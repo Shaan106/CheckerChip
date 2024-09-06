@@ -32,11 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
-#ifdef __APPLE__
-    #include <sys/syslimits.h>
-#else
-    #include <linux/limits.h>
-#endif
+#include <linux/limits.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>

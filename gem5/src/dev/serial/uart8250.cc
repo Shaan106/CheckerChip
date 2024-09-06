@@ -57,6 +57,7 @@ Uart8250::processIntrEvent(int intrBit)
     } else {
        DPRINTF(Uart, "UART InterEvent, not interrupting\n");
     }
+
 }
 
 /* The linux serial driver (8250.c about line 1182) loops reading from
@@ -77,26 +78,12 @@ Uart8250::scheduleIntr(Event *event)
     static const Tick interval = 225 * sim_clock::as_int::ns;
     DPRINTF(Uart, "Scheduling IER interrupt for %s, at cycle %lld\n",
             event->name(), curTick() + interval);
-    if (!event->scheduled()) {
+    if (!event->scheduled())
         schedule(event, curTick() + interval);
-    } else {
+    else
         reschedule(event, curTick() + interval);
-    }
 }
 
-void
-Uart8250::clearIntr(int intrBit)
-{
-    if ((status & intrBit) == 0) {
-        return;
-    }
-    status &= ~intrBit;
-
-    // Clear interrupt at the controller if neither TX nor RX is pending now
-    if (!status) {
-        platform->clearConsoleInt();
-    }
-}
 
 Uart8250::Uart8250(const Params &p)
     : Uart(p, p.pio_size), registers(this, name() + ".registers"),
@@ -145,21 +132,16 @@ uint8_t
 Uart8250::readRbr(Register8 &reg)
 {
     uint8_t data = 0;
-    if (device->dataAvailable()) {
+    if (device->dataAvailable())
         data = device->readData();
-    } else {
+    else
         DPRINTF(Uart, "empty read of RX register\n");
-    }
 
-    clearIntr(RX_INT);
+    status &= ~RX_INT;
+    platform->clearConsoleInt();
 
-    if (device->dataAvailable() && registers.ier.get().rdi) {
+    if (device->dataAvailable() && registers.ier.get().rdi)
         scheduleIntr(&rxIntrEvent);
-    } else if (rxIntrEvent.scheduled()) {
-        // Must deschedule a future interrupt if there is no more data to read,
-        // otherwise this would confuse the kernel (iir.id=rx but lsr.rdr=0)
-        deschedule(rxIntrEvent);
-    }
 
     return data;
 }
@@ -168,12 +150,10 @@ void
 Uart8250::writeThr(Register8 &reg, const uint8_t &data)
 {
     device->writeData(data);
-    clearIntr(TX_INT);
-    if (registers.ier.get().thri) {
+    platform->clearConsoleInt();
+    status &= ~TX_INT;
+    if (registers.ier.get().thri)
         scheduleIntr(&txIntrEvent);
-    } else if (txIntrEvent.scheduled()) {
-        deschedule(txIntrEvent);
-    }
 }
 
 Uart8250::Iir
@@ -188,10 +168,7 @@ Uart8250::readIir(Register<Iir> &reg)
     } else if (status & TX_INT) {
         iir.id = (uint8_t)InterruptIds::Tx;
         // Tx interrupts are cleared on IIR reads.
-        if (txIntrEvent.scheduled()) {
-            deschedule(txIntrEvent);
-        }
-        clearIntr(TX_INT);
+        status &= ~TX_INT;
     } else {
         iir.pending = 1;
     }
@@ -216,10 +193,11 @@ Uart8250::writeIer(Register<Ier> &reg, const Ier &ier)
         }
     } else {
         DPRINTF(Uart, "IER: IER_THRI cleared, descheduling TX intrrupt\n");
-        if (txIntrEvent.scheduled()) {
+        if (txIntrEvent.scheduled())
             deschedule(txIntrEvent);
-        }
-        clearIntr(TX_INT);
+        if (status & TX_INT)
+            platform->clearConsoleInt();
+        status &= ~TX_INT;
     }
 
     if (ier.rdi && device->dataAvailable()) {
@@ -227,10 +205,11 @@ Uart8250::writeIer(Register<Ier> &reg, const Ier &ier)
         scheduleIntr(&rxIntrEvent);
     } else {
         DPRINTF(Uart, "IER: IER_RDI cleared, descheduling RX intrrupt\n");
-        if (rxIntrEvent.scheduled()) {
+        if (rxIntrEvent.scheduled())
             deschedule(rxIntrEvent);
-        }
-        clearIntr(RX_INT);
+        if (status & RX_INT)
+            platform->clearConsoleInt();
+        status &= ~RX_INT;
     }
 }
 
@@ -269,6 +248,7 @@ Uart8250::dataAvailable()
         platform->postConsoleInt();
         status |= RX_INT;
     }
+
 }
 
 AddrRangeList
@@ -287,19 +267,17 @@ Uart8250::serialize(CheckpointOut &cp) const
     paramOut(cp, "LCR", registers.lcr);
     paramOut(cp, "MCR", registers.mcr);
     Tick rxintrwhen;
-    if (rxIntrEvent.scheduled()) {
+    if (rxIntrEvent.scheduled())
         rxintrwhen = rxIntrEvent.when();
-    } else {
+    else
         rxintrwhen = 0;
-    }
     Tick txintrwhen;
-    if (txIntrEvent.scheduled()) {
+    if (txIntrEvent.scheduled())
         txintrwhen = txIntrEvent.when();
-    } else {
+    else
         txintrwhen = 0;
-    }
-    SERIALIZE_SCALAR(rxintrwhen);
-    SERIALIZE_SCALAR(txintrwhen);
+     SERIALIZE_SCALAR(rxintrwhen);
+     SERIALIZE_SCALAR(txintrwhen);
 }
 
 void
@@ -313,12 +291,10 @@ Uart8250::unserialize(CheckpointIn &cp)
     Tick txintrwhen;
     UNSERIALIZE_SCALAR(rxintrwhen);
     UNSERIALIZE_SCALAR(txintrwhen);
-    if (rxintrwhen != 0) {
+    if (rxintrwhen != 0)
         schedule(rxIntrEvent, rxintrwhen);
-    }
-    if (txintrwhen != 0) {
+    if (txintrwhen != 0)
         schedule(txIntrEvent, txintrwhen);
-    }
 }
 
 } // namespace gem5

@@ -138,7 +138,7 @@ class FetchUnit
             return is_reserved;
         }
 
-        void fetchDone(PacketPtr ptr);
+        void fetchDone(Addr vaddr);
 
         /**
          * checks if the buffer contains valid data. this essentially

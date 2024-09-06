@@ -160,8 +160,7 @@ class SimpleIndirectPredictor : public IndirectPredictor
 
     inline bool isIndirectNoReturn(BranchType type) {
         return (type == BranchType::CallIndirect) ||
-               (type == BranchType::IndirectUncond) ||
-               (type == BranchType::IndirectCond);
+               (type == BranchType::IndirectUncond);
     }
 
   protected:

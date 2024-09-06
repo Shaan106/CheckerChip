@@ -62,15 +62,7 @@ class InfixOperatorExprAST(ExprAST):
         # Figure out what the input and output types should be
         if self.op in ("==", "!=", ">=", "<=", ">", "<"):
             output = "bool"
-
-            if (
-                str(ltype) == "Addr"
-                and str(rtype) == "int"
-                or str(ltype) == "int"
-                and str(rtype) == "Addr"
-            ):
-                pass
-            elif ltype != rtype:
+            if ltype != rtype:
                 self.error(
                     "Type mismatch: left and right operands of "
                     + "operator '%s' must be the same type. "

@@ -92,6 +92,9 @@ class RiscvISA(BaseISA):
     cxx_class = "gem5::RiscvISA::ISA"
     cxx_header = "arch/riscv/isa.hh"
 
+    check_alignment = Param.Bool(
+        True, "whether to check memory access alignment"
+    )
     riscv_type = Param.RiscvType("RV64", "RV32 or RV64")
 
     enable_rvv = Param.Bool(True, "Enable vector extension")

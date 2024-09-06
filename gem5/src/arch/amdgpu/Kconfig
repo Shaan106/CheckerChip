@@ -29,4 +29,5 @@ prompt "GPU ISA"
 endchoice
 endif
 
+rsource "gcn3/Kconfig"
 rsource "vega/Kconfig"

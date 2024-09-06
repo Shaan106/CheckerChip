@@ -198,12 +198,16 @@ struct TlbEntry : public Serializable
         bool ignoreAsn = false;
         // The virtual machine ID used for stage 2 translation
         vmid_t vmid = 0;
+        // if the lookup is done from hyp mode
+        bool hyp = false;
         // if the lookup is secure
         bool secure = false;
         // if the lookup should modify state
         bool functional = false;
         // selecting the translation regime
-        TranslationRegime targetRegime = TranslationRegime::EL10;
+        ExceptionLevel targetEL = EL0;
+        // if we are in host (EL2&0 regime)
+        bool inHost = false;
         // mode to differentiate between read/writes/fetches.
         BaseMMU::Mode mode = BaseMMU::Read;
     };
@@ -234,6 +238,7 @@ struct TlbEntry : public Serializable
     // True if the long descriptor format is used for this entry (LPAE only)
     bool longDescFormat; // @todo use this in the update attribute bethod
 
+    bool isHyp;
     bool global;
     bool valid;
 
@@ -241,8 +246,8 @@ struct TlbEntry : public Serializable
     bool ns;
     // True if the entry was brought in from a non-secure page table
     bool nstid;
-    // Translation regime on insert, AARCH64 EL0&1, AARCH32 -> el=1
-    TranslationRegime regime;
+    // Exception level on insert, AARCH64 EL0&1, AARCH32 -> el=1
+    ExceptionLevel el;
     // This is used to distinguish between instruction and data entries
     // in unified TLBs
     TypeTLB type;
@@ -268,9 +273,9 @@ struct TlbEntry : public Serializable
          asid(_asn), vmid(0), tg(Grain4KB), N(0),
          innerAttrs(0), outerAttrs(0), ap(read_only ? 0x3 : 0), hap(0x3),
          domain(DomainType::Client),  mtype(MemoryType::StronglyOrdered),
-         longDescFormat(false), global(false), valid(true),
-         ns(true), nstid(true), regime(TranslationRegime::EL10),
-         type(TypeTLB::unified), partial(false),
+         longDescFormat(false), isHyp(false), global(false), valid(true),
+         ns(true), nstid(true), el(EL0), type(TypeTLB::unified),
+         partial(false),
          nonCacheable(uncacheable),
          shareable(false), outerShareable(false), xn(0), pxn(0)
     {
@@ -286,9 +291,9 @@ struct TlbEntry : public Serializable
          asid(0), vmid(0), tg(ReservedGrain), N(0),
          innerAttrs(0), outerAttrs(0), ap(0), hap(0x3),
          domain(DomainType::Client), mtype(MemoryType::StronglyOrdered),
-         longDescFormat(false), global(false), valid(false),
-         ns(true), nstid(true), regime(TranslationRegime::EL10),
-         type(TypeTLB::unified), partial(false), nonCacheable(false),
+         longDescFormat(false), isHyp(false), global(false), valid(false),
+         ns(true), nstid(true), el(EL0), type(TypeTLB::unified),
+         partial(false), nonCacheable(false),
          shareable(false), outerShareable(false), xn(0), pxn(0)
     {
         // no restrictions by default, hap = 0x3
@@ -327,14 +332,14 @@ struct TlbEntry : public Serializable
     {
         bool match = false;
         if (valid && matchAddress(lookup) &&
-            (lookup.secure == !nstid))
+            (lookup.secure == !nstid) && (lookup.hyp == isHyp))
         {
-            match = checkRegime(lookup.targetRegime);
+            match = checkELMatch(lookup.targetEL, lookup.inHost);
 
             if (match && !lookup.ignoreAsn) {
                 match = global || (lookup.asn == asid);
             }
-            if (match && useVMID(lookup.targetRegime)) {
+            if (match && useVMID(lookup.targetEL, lookup.inHost)) {
                 match = lookup.vmid == vmid;
             }
         }
@@ -342,9 +347,21 @@ struct TlbEntry : public Serializable
     }
 
     bool
-    checkRegime(TranslationRegime target_regime) const
+    checkELMatch(ExceptionLevel target_el, bool in_host) const
     {
-        return regime == target_regime;
+        switch (target_el) {
+            case EL3:
+                return el == EL3;
+            case EL2:
+              {
+                return el == EL2 || (el == EL0 && in_host);
+              }
+            case EL1:
+            case EL0:
+                return (el == EL0) || (el == EL1);
+            default:
+                return false;
+        }
     }
 
     Addr
@@ -405,10 +422,9 @@ struct TlbEntry : public Serializable
     std::string
     print() const
     {
-        return csprintf("%#x, asn %d vmn %d ppn %#x size: %#x ap:%d "
-                        "ns:%d nstid:%d g:%d regime:%s", vpn << N, asid, vmid,
-                        pfn << N, size, ap, ns, nstid, global,
-                        regimeToStr(regime));
+        return csprintf("%#x, asn %d vmn %d hyp %d ppn %#x size: %#x ap:%d "
+                        "ns:%d nstid:%d g:%d el:%d", vpn << N, asid, vmid,
+                        isHyp, pfn << N, size, ap, ns, nstid, global, el);
     }
 
     void
@@ -420,6 +436,7 @@ struct TlbEntry : public Serializable
         SERIALIZE_SCALAR(vpn);
         SERIALIZE_SCALAR(asid);
         SERIALIZE_SCALAR(vmid);
+        SERIALIZE_SCALAR(isHyp);
         SERIALIZE_SCALAR(N);
         SERIALIZE_SCALAR(global);
         SERIALIZE_SCALAR(valid);
@@ -450,6 +467,7 @@ struct TlbEntry : public Serializable
         UNSERIALIZE_SCALAR(vpn);
         UNSERIALIZE_SCALAR(asid);
         UNSERIALIZE_SCALAR(vmid);
+        UNSERIALIZE_SCALAR(isHyp);
         UNSERIALIZE_SCALAR(N);
         UNSERIALIZE_SCALAR(global);
         UNSERIALIZE_SCALAR(valid);

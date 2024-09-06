@@ -81,9 +81,9 @@ SDMAEngine::setGPUDevice(AMDGPUDevice *gpu_device)
 }
 
 int
-SDMAEngine::getIHClientId(int _id)
+SDMAEngine::getIHClientId()
 {
-    switch (_id) {
+    switch (id) {
       case 0:
         return SOC15_IH_CLIENTID_SDMA0;
       case 1:
@@ -184,7 +184,6 @@ SDMAEngine::registerRLCQueue(Addr doorbell, Addr mqdAddr, SDMAQueueDesc *mqd)
     Addr rptr_wb_addr = mqd->sdmax_rlcx_rb_rptr_addr_hi;
     rptr_wb_addr <<= 32;
     rptr_wb_addr |= mqd->sdmax_rlcx_rb_rptr_addr_lo;
-    bool priv = bits(mqd->sdmax_rlcx_rb_cntl, 23, 23);
 
     // Get first free RLC
     if (!rlc0.valid()) {
@@ -200,7 +199,6 @@ SDMAEngine::registerRLCQueue(Addr doorbell, Addr mqdAddr, SDMAQueueDesc *mqd)
         rlc0.processing(false);
         rlc0.setMQD(mqd);
         rlc0.setMQDAddr(mqdAddr);
-        rlc0.setPriv(priv);
     } else if (!rlc1.valid()) {
         DPRINTF(SDMAEngine, "Doorbell %lx mapped to RLC1\n", doorbell);
         rlcInfo[1] = doorbell;
@@ -214,7 +212,6 @@ SDMAEngine::registerRLCQueue(Addr doorbell, Addr mqdAddr, SDMAQueueDesc *mqd)
         rlc1.processing(false);
         rlc1.setMQD(mqd);
         rlc1.setMQDAddr(mqdAddr);
-        rlc1.setPriv(priv);
     } else {
         panic("No free RLCs. Check they are properly unmapped.");
     }
@@ -269,7 +266,6 @@ SDMAEngine::deallocateRLCQueues()
     for (auto doorbell: rlcInfo) {
         if (doorbell) {
             unregisterRLCQueue(doorbell);
-            gpuDevice->unsetDoorbell(doorbell);
         }
     }
 }
@@ -390,15 +386,7 @@ SDMAEngine::decodeHeader(SDMAQueue *q, uint32_t header)
       case SDMA_OP_NOP: {
         uint32_t NOP_count = (header >> 16) & 0x3FFF;
         DPRINTF(SDMAEngine, "SDMA NOP packet with count %d\n", NOP_count);
-        if (NOP_count > 0) {
-            for (int i = 0; i < NOP_count; ++i) {
-                if (q->rptr() == q->wptr()) {
-                    warn("NOP count is beyond wptr, ignoring remaining NOPs");
-                    break;
-                }
-                q->incRptr(4);
-            }
-        }
+        if (NOP_count > 0) q->incRptr(NOP_count * 4);
         decodeNext(q);
         } break;
       case SDMA_OP_COPY: {
@@ -628,19 +616,14 @@ SDMAEngine::writeReadData(SDMAQueue *q, sdmaWrite *pkt, uint32_t *dmaBuffer)
 
     // lastly we write read data to the destination address
     if (gpuDevice->getVM().inMMHUB(pkt->dest)) {
-        Addr mmhub_addr = pkt->dest - gpuDevice->getVM().getMMHUBBase();
-
-        fatal_if(gpuDevice->getVM().inGARTRange(mmhub_addr),
-                "SDMA write to GART not implemented");
-
+        Addr mmhubAddr = pkt->dest - gpuDevice->getVM().getMMHUBBase();
         auto cb = new EventFunctionWrapper(
             [ = ]{ writeDone(q, pkt, dmaBuffer); }, name());
-        gpuDevice->getMemMgr()->writeRequest(mmhub_addr, (uint8_t *)dmaBuffer,
+        gpuDevice->getMemMgr()->writeRequest(mmhubAddr, (uint8_t *)dmaBuffer,
                                            bufferSize, 0, cb);
     } else {
-        if (q->priv()) {
-            pkt->dest = getGARTAddr(pkt->dest);
-        }
+        // TODO: getGARTAddr?
+        pkt->dest = getGARTAddr(pkt->dest);
         auto cb = new DmaVirtCallback<uint32_t>(
             [ = ] (const uint64_t &) { writeDone(q, pkt, dmaBuffer); });
         dmaWriteVirt(pkt->dest, bufferSize, cb, (void *)dmaBuffer);
@@ -667,13 +650,9 @@ SDMAEngine::copy(SDMAQueue *q, sdmaCopy *pkt)
     q->incRptr(sizeof(sdmaCopy));
     // count represents the number of bytes - 1 to be copied
     pkt->count++;
-    if (q->priv()) {
-        if (!gpuDevice->getVM().inMMHUB(pkt->source)) {
-            DPRINTF(SDMAEngine, "Getting GART addr for %lx\n", pkt->source);
-            pkt->source = getGARTAddr(pkt->source);
-            DPRINTF(SDMAEngine, "GART addr %lx\n", pkt->source);
-        }
-    }
+    DPRINTF(SDMAEngine, "Getting GART addr for %lx\n", pkt->source);
+    pkt->source = getGARTAddr(pkt->source);
+    DPRINTF(SDMAEngine, "GART addr %lx\n", pkt->source);
 
     // Read data from the source first, then call the copyReadData method
     uint8_t *dmaBuffer = new uint8_t[pkt->count];
@@ -749,19 +728,6 @@ SDMAEngine::copyReadData(SDMAQueue *q, sdmaCopy *pkt, uint8_t *dmaBuffer)
             [ = ] (const uint64_t &) { copyDone(q, pkt, dmaBuffer); });
         dmaWriteVirt(pkt->dest, pkt->count, cb, (void *)dmaBuffer);
     }
-
-    // For destinations in the GART table, gem5 uses a mapping tables instead
-    // of functionally going to device memory, so we need to update that copy.
-    if (gpuDevice->getVM().inGARTRange(device_addr)) {
-        // GART entries are always 8 bytes.
-        assert((pkt->count % 8) == 0);
-        for (int i = 0; i < pkt->count/8; ++i) {
-            Addr gart_addr = device_addr + i*8 - gpuDevice->getVM().gartBase();
-            DPRINTF(SDMAEngine, "Shadow copying to GART table %lx -> %lx\n",
-                    gart_addr, dmaBuffer64[i]);
-            gpuDevice->getVM().gartTable[gart_addr] = dmaBuffer64[i];
-        }
-    }
 }
 
 /* Completion of a copy packet. */
@@ -779,11 +745,7 @@ SDMAEngine::copyDone(SDMAQueue *q, sdmaCopy *pkt, uint8_t *dmaBuffer)
 void
 SDMAEngine::indirectBuffer(SDMAQueue *q, sdmaIndirectBuffer *pkt)
 {
-    if (q->priv()) {
-        q->ib()->base(getGARTAddr(pkt->base));
-    } else {
-        q->ib()->base(pkt->base);
-    }
+    q->ib()->base(getGARTAddr(pkt->base));
     q->ib()->rptr(0);
     q->ib()->size(pkt->size * sizeof(uint32_t) + 1);
     q->ib()->setWptr(pkt->size * sizeof(uint32_t));
@@ -799,9 +761,7 @@ void
 SDMAEngine::fence(SDMAQueue *q, sdmaFence *pkt)
 {
     q->incRptr(sizeof(sdmaFence));
-    if (q->priv()) {
-        pkt->dest = getGARTAddr(pkt->dest);
-    }
+    pkt->dest = getGARTAddr(pkt->dest);
 
     // Writing the data from the fence packet to the destination address.
     auto cb = new DmaVirtCallback<uint32_t>(
@@ -829,12 +789,8 @@ SDMAEngine::trap(SDMAQueue *q, sdmaTrap *pkt)
 
     uint32_t ring_id = (q->queueType() == SDMAPage) ? 3 : 0;
 
-    int node_id = 0;
-    int local_id = getId();
-
     gpuDevice->getIH()->prepareInterruptCookie(pkt->intrContext, ring_id,
-                                               getIHClientId(local_id),
-                                               TRAP_ID, 2*node_id);
+                                               getIHClientId(), TRAP_ID);
     gpuDevice->getIH()->submitInterruptCookie();
 
     delete pkt;
@@ -860,7 +816,8 @@ SDMAEngine::srbmWrite(SDMAQueue *q, sdmaSRBMWriteHeader *header,
     DPRINTF(SDMAEngine, "SRBM write to %#x with data %#x\n",
             reg_addr, pkt->data);
 
-    gpuDevice->setRegVal(reg_addr, pkt->data);
+    warn_once("SRBM write not performed, no SRBM model. This needs to be fixed"
+              " if correct system simulation is relying on SRBM registers.");
 
     delete header;
     delete pkt;
@@ -990,20 +947,13 @@ SDMAEngine::ptePde(SDMAQueue *q, sdmaPtePde *pkt)
 
     // Writing generated data to the destination address.
     if (gpuDevice->getVM().inMMHUB(pkt->dest)) {
-        Addr mmhub_addr = pkt->dest - gpuDevice->getVM().getMMHUBBase();
-
-        fatal_if(gpuDevice->getVM().inGARTRange(mmhub_addr),
-                "SDMA write to GART not implemented");
-
+        Addr mmhubAddr = pkt->dest - gpuDevice->getVM().getMMHUBBase();
         auto cb = new EventFunctionWrapper(
             [ = ]{ ptePdeDone(q, pkt, dmaBuffer); }, name());
-        gpuDevice->getMemMgr()->writeRequest(mmhub_addr, (uint8_t *)dmaBuffer,
+        gpuDevice->getMemMgr()->writeRequest(mmhubAddr, (uint8_t *)dmaBuffer,
                                              sizeof(uint64_t) * pkt->count, 0,
                                              cb);
     } else {
-        if (q->priv()) {
-            pkt->dest = getGARTAddr(pkt->dest);
-        }
         auto cb = new DmaVirtCallback<uint64_t>(
             [ = ] (const uint64_t &) { ptePdeDone(q, pkt, dmaBuffer); });
         dmaWriteVirt(pkt->dest, sizeof(uint64_t) * pkt->count, cb,
@@ -1136,7 +1086,7 @@ SDMAEngine::constFillDone(SDMAQueue *q, sdmaConstFill *pkt, uint8_t *fill_data)
 {
     DPRINTF(SDMAEngine, "ConstFill to %lx done\n", pkt->addr);
 
-    delete [] fill_data;
+    delete fill_data;
     delete pkt;
     decodeNext(q);
 }

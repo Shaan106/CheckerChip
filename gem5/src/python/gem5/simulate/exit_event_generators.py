@@ -36,7 +36,6 @@ from m5.util import warn
 from gem5.resources.looppoint import Looppoint
 
 from ..components.processors.abstract_processor import AbstractProcessor
-from ..components.processors.spatter_gen import SpatterGenerator
 from ..components.processors.switchable_processor import SwitchableProcessor
 from ..resources.resource import SimpointResource
 
@@ -222,9 +221,3 @@ def looppoint_save_checkpoint_generator(
         yield False
 
     yield True
-
-
-def spatter_exit_generator(spatter_gen: SpatterGenerator):
-    while True:
-        assert isinstance(spatter_gen, SpatterGenerator)
-        yield from spatter_gen.handle_spatter_exit()

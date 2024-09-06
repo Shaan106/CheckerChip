@@ -116,7 +116,6 @@ FailUnimplemented::FailUnimplemented(const char *_mnemonic,
     // don't call execute() (which panics) if we're on a
     // speculative path
     flags[IsNonSpeculative] = true;
-    flags[IsInvalid] = true;
 }
 
 FailUnimplemented::FailUnimplemented(const char *_mnemonic,
@@ -128,7 +127,6 @@ FailUnimplemented::FailUnimplemented(const char *_mnemonic,
     // don't call execute() (which panics) if we're on a
     // speculative path
     flags[IsNonSpeculative] = true;
-    flags[IsInvalid] = true;
 }
 
 Fault
