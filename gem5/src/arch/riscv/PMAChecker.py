@@ -40,20 +40,9 @@ from m5.proxy import *
 from m5.SimObject import SimObject
 
 
-class BasePMAChecker(SimObject):
-    type = "BasePMAChecker"
-    cxx_header = "arch/riscv/pma_checker.hh"
-    cxx_class = "gem5::RiscvISA::BasePMAChecker"
-    abstract = True
-
-
-class PMAChecker(BasePMAChecker):
+class PMAChecker(SimObject):
     type = "PMAChecker"
     cxx_header = "arch/riscv/pma_checker.hh"
-    cxx_class = "gem5::RiscvISA::PMAChecker"
+    cxx_class = "gem5::PMAChecker"
 
     uncacheable = VectorParam.AddrRange([], "Uncacheable address ranges")
-    misaligned = VectorParam.AddrRange(
-        [],
-        "Address ranges support misaligned load/store to memory",
-    )

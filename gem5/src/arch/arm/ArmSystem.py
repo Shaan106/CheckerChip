@@ -1,4 +1,4 @@
-# Copyright (c) 2009, 2012-2013, 2015-2024 Arm Limited
+# Copyright (c) 2009, 2012-2013, 2015-2023 Arm Limited
 # All rights reserved.
 #
 # The license below extends only to copyright in the software and shall
@@ -65,11 +65,6 @@ class SmeVectorLength(UInt8):
 
 class ArmExtension(ScopedEnum):
     vals = [
-        "FEAT_AES",
-        "FEAT_PMULL",
-        "FEAT_SHA1",
-        "FEAT_SHA256",
-        "FEAT_CRC32",
         # Armv8.1
         "FEAT_VHE",
         "FEAT_PAN",
@@ -114,8 +109,8 @@ class ArmExtension(ScopedEnum):
         "SECURITY",
         "LPAE",
         "VIRTUALIZATION",
+        "CRYPTO",
         "TME",
-        "FEAT_MPAM",
     ]
 
 
@@ -164,16 +159,7 @@ class ArmRelease(SimObject):
 
 
 class Armv8(ArmRelease):
-    extensions = [
-        "LPAE",
-        "VIRTUALIZATION",
-        "SECURITY",
-        "FEAT_AES",
-        "FEAT_PMULL",
-        "FEAT_SHA1",
-        "FEAT_SHA256",
-        "FEAT_CRC32",
-    ]
+    extensions = ["LPAE", "VIRTUALIZATION", "SECURITY"]
 
 
 class ArmDefaultRelease(Armv8):

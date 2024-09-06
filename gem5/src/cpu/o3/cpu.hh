@@ -110,9 +110,6 @@ class CPU : public BaseCPU
     BaseMMU *mmu;
     using LSQRequest = LSQ::LSQRequest;
 
-    using PerThreadUnifiedRenameMap =
-        UnifiedRenameMap::PerThreadUnifiedRenameMap;
-
     /** Overall CPU status. */
     Status _status;
 
@@ -423,10 +420,10 @@ class CPU : public BaseCPU
     UnifiedFreeList freeList;
 
     /** The rename map. */
-    PerThreadUnifiedRenameMap renameMap;
+    UnifiedRenameMap renameMap[MaxThreads];
 
     /** The commit rename map. */
-    PerThreadUnifiedRenameMap commitRenameMap;
+    UnifiedRenameMap commitRenameMap[MaxThreads];
 
     /** The re-order buffer. */
     ROB rob;

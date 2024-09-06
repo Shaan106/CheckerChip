@@ -149,10 +149,8 @@ BaseMMU::MMUTranslationGen::translate(Range &range) const
 
     range.fault = mmu->translateFunctional(req, tc, mode);
 
-    if (range.fault == NoFault) {
+    if (range.fault == NoFault)
         range.paddr = req->getPaddr();
-        range.flags = req->getFlags();
-    }
 }
 
 void

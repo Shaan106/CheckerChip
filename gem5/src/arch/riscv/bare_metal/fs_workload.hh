@@ -30,7 +30,6 @@
 #define __ARCH_RISCV_BARE_METAL_SYSTEM_HH__
 
 #include "arch/riscv/remote_gdb.hh"
-#include "arch/riscv/semihosting.hh"
 #include "params/RiscvBareMetal.hh"
 #include "sim/workload.hh"
 
@@ -49,7 +48,6 @@ class BareMetal : public Workload
     Addr _resetVect;
     loader::ObjectFile *bootloader;
     loader::SymbolTable bootloaderSymtab;
-    RiscvSemihosting* semihosting;
 
   public:
     PARAMS(RiscvBareMetal);
@@ -88,7 +86,6 @@ class BareMetal : public Workload
     bool isBareMetal() const { return _isBareMetal; }
 
     Addr getEntry() const override { return _resetVect; }
-    RiscvSemihosting *getSemihosting() const override { return semihosting; }
 };
 
 } // namespace RiscvISA

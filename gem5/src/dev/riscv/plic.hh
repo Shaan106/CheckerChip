@@ -57,9 +57,11 @@ namespace gem5
 using namespace RiscvISA;
 /**
  * NOTE:
- * This implementation of PLIC is based on
- * he riscv-plic-spec repository:
- * https://github.com/riscv/riscv-plic-spec/releases/tag/1.0.0
+ * This implementation of CLINT is based on
+ * the SiFive U54MC datasheet:
+ * https://sifive.cdn.prismic.io/sifive/fab000f6-
+ * 0e07-48d0-9602-e437d5367806_sifive_U54MC_rtl_
+ * full_20G1.03.00_manual.pdf
  */
 
 /**
@@ -122,9 +124,13 @@ class Plic : public PlicBase
      */
     int nSrc32;
     /**
-     * PLIC hart/pmode address configs, stored in the format {hartID, pmode}
+     * Number of interrupt contexts
+     * = nThread * 2
+     * e.g. context 0 => thread 0 M mode
+     *      context 1 => thread 0 S mode
+     * This is based on SiFive U54MC datasheet
      */
-    std::vector<std::pair<uint32_t, ExceptionCode>> contextConfigs;
+    int nContext;
 
   public:
     typedef PlicParams Params;
@@ -254,12 +260,6 @@ class Plic : public PlicBase
     // per-context last-claimed id
     std::vector<uint32_t> lastID;
     PlicOutput output;
-
-    /**
-     * The function for handling context config from params
-     */
-    void initContextFromNContexts(int n_contexts);
-    void initContextFromHartConfig(const std::string& hart_config);
 
     /**
      * Trigger:

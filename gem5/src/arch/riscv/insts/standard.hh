@@ -80,9 +80,6 @@ class SystemOp : public RiscvStaticInst
 
     std::string generateDisassembly(
         Addr pc, const loader::SymbolTable *symtab) const override;
-
-  protected:
-    Fault executeEBreakOrSemihosting(ExecContext *xc) const;
 };
 
 /**

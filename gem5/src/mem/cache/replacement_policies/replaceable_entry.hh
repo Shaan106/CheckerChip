@@ -73,7 +73,7 @@ class ReplaceableEntry
     uint32_t _way;
 
   public:
-    ReplaceableEntry() : _set(0), _way(0) {}
+    ReplaceableEntry() = default;
     virtual ~ReplaceableEntry() = default;
 
     /**

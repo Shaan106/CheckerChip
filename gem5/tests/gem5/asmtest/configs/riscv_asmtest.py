@@ -32,7 +32,6 @@ gem5 while still being functinal.
 """
 
 import argparse
-import sys
 
 from gem5.components.boards.simple_board import SimpleBoard
 from gem5.components.cachehierarchies.classic.no_cache import NoCache
@@ -120,5 +119,3 @@ print(
         simulator.get_current_tick(), simulator.get_last_exit_event_cause()
     )
 )
-
-sys.exit(simulator.get_last_exit_event_code())

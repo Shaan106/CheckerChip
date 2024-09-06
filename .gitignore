@@ -1,2 +1,5 @@
 /gem5/build/
-/gem5_old/
+/gem5_obsolete/
+**/*.iso
+/SPEC_build/
+/SPECCPU2006.clean/

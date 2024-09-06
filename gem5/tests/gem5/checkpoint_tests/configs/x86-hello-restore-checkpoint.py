@@ -61,13 +61,8 @@ board = SimpleBoard(
     cache_hierarchy=cache_hierarchy,
 )
 board.set_se_binary_workload(
-    obtain_resource(
-        "x86-hello64-static",
-        resource_version="1.0.0",
-    ),
-    checkpoint=obtain_resource(
-        "x86-hello-test-checkpoint-v24-0", resource_version="3.0.0"
-    ),
+    obtain_resource("x86-hello64-static"),
+    checkpoint=obtain_resource("x86-hello-test-checkpoint"),
 )
 
 sim = Simulator(board=board, full_system=False)

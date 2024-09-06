@@ -75,9 +75,7 @@ board = SimpleBoard(
     cache_hierarchy=cache_hierarchy,
 )
 
-board.set_se_binary_workload(
-    obtain_resource("power-hello", resource_version="1.0.0")
-)
+board.set_se_binary_workload(obtain_resource("power-hello"))
 
 # Lastly we run the simulation.
 simulator = Simulator(board=board)

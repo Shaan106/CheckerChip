@@ -45,7 +45,7 @@ class PrefetchType(Enum):
 
 
 class GfxVersion(ScopedEnum):
-    vals = ["gfx900", "gfx902", "gfx908", "gfx90a", "gfx942"]
+    vals = ["gfx801", "gfx803", "gfx900", "gfx902", "gfx908", "gfx90a"]
 
 
 class PoolManager(SimObject):
@@ -93,14 +93,6 @@ class VectorRegisterFile(RegisterFile):
     type = "VectorRegisterFile"
     cxx_class = "gem5::VectorRegisterFile"
     cxx_header = "gpu-compute/vector_register_file.hh"
-
-
-class RegisterFileCache(SimObject):
-    type = "RegisterFileCache"
-    cxx_class = "gem5::RegisterFileCache"
-    cxx_header = "gpu-compute/register_file_cache.hh"
-    simd_id = Param.Int("SIMD ID associated with this Register File Cache")
-    cache_size = Param.Int(0, "number of entries of rfc")
 
 
 class RegisterManager(SimObject):
@@ -157,11 +149,6 @@ class ComputeUnit(ClockedObject):
     dpbypass_pipe_length = Param.Int(
         4, "vector ALU Double Precision bypass latency"
     )
-
-    rfc_pipe_length = Param.Int(
-        2, "number of cycles per register file cache access"
-    )
-
     scalar_pipe_length = Param.Int(1, "number of pipe stages per scalar ALU")
     issue_period = Param.Int(4, "number of cycles per issue period")
 
@@ -273,9 +260,6 @@ class ComputeUnit(ClockedObject):
     scalar_register_file = VectorParam.ScalarRegisterFile(
         "Scalar register file"
     )
-
-    register_file_cache = VectorParam.RegisterFileCache("Register file cache")
-
     out_of_order_data_delivery = Param.Bool(
         False, "enable OoO data delivery in the GM pipeline"
     )
@@ -294,7 +278,6 @@ class Shader(ClockedObject):
     dispatcher = Param.GPUDispatcher("GPU workgroup dispatcher")
     system_hub = Param.AMDGPUSystemHub(NULL, "GPU System Hub (FS Mode only)")
     n_wf = Param.Int(10, "Number of wavefront slots per SIMD")
-    cu_per_sqc = Param.Int(4, "Number of CUs that share an SQC")
     impl_kern_launch_acq = Param.Bool(
         True,
         """Insert acq packet into
@@ -321,7 +304,7 @@ class GPUComputeDriver(EmulatedDriver):
     cxx_header = "gpu-compute/gpu_compute_driver.hh"
     device = Param.GPUCommandProcessor("GPU controlled by this driver")
     isdGPU = Param.Bool(False, "Driver is for a dGPU")
-    gfxVersion = Param.GfxVersion("gfx902", "ISA of gpu to model")
+    gfxVersion = Param.GfxVersion("gfx801", "ISA of gpu to model")
     dGPUPoolID = Param.Int(0, "Pool ID for dGPU.")
     # Default Mtype for caches
     # --     1   1   1   C_RW_S  (Cached-ReadWrite-Shared)
@@ -359,10 +342,6 @@ class GPUCommandProcessor(DmaVirtDevice):
     hsapp = Param.HSAPacketProcessor("PP attached to this device")
     walker = Param.VegaPagetableWalker(
         VegaPagetableWalker(), "Page table walker"
-    )
-    target_non_blit_kernel_id = Param.Int(
-        0,
-        "Skip kernels until reaching this kernel (counting only non-blit kernels)",
     )
 
 

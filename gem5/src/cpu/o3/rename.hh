@@ -170,7 +170,7 @@ class Rename
     void setActiveThreads(std::list<ThreadID> *at_ptr);
 
     /** Sets pointer to rename maps (per-thread structures). */
-    void setRenameMap(UnifiedRenameMap::PerThreadUnifiedRenameMap& rm_ptr);
+    void setRenameMap(UnifiedRenameMap rm_ptr[MaxThreads]);
 
     /** Sets pointer to the free list. */
     void setFreeList(UnifiedFreeList *fl_ptr);

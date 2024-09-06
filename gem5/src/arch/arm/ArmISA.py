@@ -1,4 +1,4 @@
-# Copyright (c) 2012-2013, 2015-2022, 2024 Arm Limited
+# Copyright (c) 2012-2013, 2015-2022 ARM Limited
 # All rights reserved.
 #
 # The license below extends only to copyright in the software and shall
@@ -52,11 +52,7 @@ class DecoderFlavor(Enum):
 
 class ArmDefaultSERelease(ArmRelease):
     extensions = [
-        "FEAT_AES",
-        "FEAT_PMULL",
-        "FEAT_SHA1",
-        "FEAT_SHA256",
-        "FEAT_CRC32",
+        "CRYPTO",
         # Armv8.1
         "FEAT_LSE",
         "FEAT_RDM",
@@ -169,10 +165,6 @@ class ArmISA(BaseISA):
     id_aa64mmfr2_el1 = Param.UInt64(
         0x0000000000010010, "AArch64 Memory Model Feature Register 2"
     )
-
-    # HAS_SDEFLT | HAS_FORCE_NS | HAS_TIDR | PMG_MAX = 128 |
-    # VPMR_MAX = 7 | HAS_HCR | PARTID_MAX = 256
-    mpamidr_el1 = Param.UInt64(0x34000080001E0100, "MPAM ID Register (EL1)")
 
     # Any access (read/write) to an unimplemented
     # Implementation Defined registers is not causing an Undefined Instruction.

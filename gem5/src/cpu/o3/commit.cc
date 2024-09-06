@@ -67,6 +67,7 @@
 #include "sim/faults.hh"
 #include "sim/full_system.hh"
 
+
 namespace gem5
 {
 
@@ -254,7 +255,7 @@ Commit::setActiveThreads(std::list<ThreadID> *at_ptr)
 }
 
 void
-Commit::setRenameMap(UnifiedRenameMap::PerThreadUnifiedRenameMap& rm_ptr)
+Commit::setRenameMap(UnifiedRenameMap rm_ptr[MaxThreads])
 {
     for (ThreadID tid = 0; tid < numThreads; tid++)
         renameMap[tid] = &rm_ptr[tid];
@@ -905,6 +906,12 @@ Commit::commitInsts()
     // things at the same time...
     ////////////////////////////////////
 
+    // scons build/X86/gem5.opt -j40
+
+    // TAG 01
+    // added a debug output
+    std::cout << "\n\nInstruction committing!\n\n" << std::endl;
+
     DPRINTF(Commit, "Trying to commit instructions in the ROB.\n");
 
     unsigned num_committed = 0;
@@ -913,7 +920,7 @@ Commit::commitInsts()
 
     // Commit as many instructions as possible until the commit bandwidth
     // limit is reached, or it becomes impossible to commit any more.
-    while (num_committed < commitWidth) {
+    while (num_committed < commitWidth) {   //TODO: check for checker credits
         // hardware transactionally memory
         // If executing within a transaction,
         // need to handle interrupts specially
@@ -971,6 +978,7 @@ Commit::commitInsts()
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
+                //TODO: send to checker somewhere in here? (dec credits)
                 ++num_committed;
                 cpu->commitStats[tid]
                     ->committedInstType[head_inst->opClass()]++;
@@ -1403,24 +1411,6 @@ ThreadID
 Commit::getCommittingThread()
 {
     if (numThreads > 1) {
-        // If a thread is exiting, we need to ensure that *all* of its
-        // instructions will be retired in this cycle, because the
-        // thread will be removed from the CPU at the end of this cycle.
-        // To ensure this, we prioritize committing from exiting threads
-        // before we consider other threads using the specified SMT
-        // commit policy.
-        for (ThreadID tid : *activeThreads) {
-            if (cpu->isThreadExiting(tid) &&
-                !rob->isEmpty(tid) &&
-                (commitStatus[tid] == Running ||
-                 commitStatus[tid] == Idle ||
-                 commitStatus[tid] == FetchTrapPending)) {
-                assert(rob->isHeadReady(tid) &&
-                       rob->readHeadInst(tid)->isSquashed());
-                return tid;
-            }
-        }
-
         switch (commitPolicy) {
           case CommitPolicy::RoundRobin:
             return roundRobin();

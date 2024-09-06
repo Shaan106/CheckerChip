@@ -97,8 +97,6 @@ class GPUStaticInstFlags(Enum):
         # Coherence flags
         "GloballyCoherent",  # Coherent with other work-items on same device
         "SystemCoherent",  # Coherent with a different device, or the host
-        # Integer flags
-        "I8",  # Int8 operation
         # Floating-point flags
         "F16",  # F16 operation
         "F32",  # F32 operation
@@ -107,5 +105,4 @@ class GPUStaticInstFlags(Enum):
         "FMA",  # FMA
         "MAC",  # MAC
         "MAD",  # MAD
-        "MFMA",  # MFMA
     ]

@@ -180,14 +180,10 @@ kernel_args = motherboard.get_default_kernel_args() + [args.kernel_args]
 # Set the Full System workload.
 motherboard.set_kernel_disk_workload(
     kernel=obtain_resource(
-        "x86-linux-kernel-5.4.49",
-        resource_directory=args.resource_directory,
-        resource_version="1.0.0",
+        "x86-linux-kernel-5.4.49", resource_directory=args.resource_directory
     ),
     disk_image=obtain_resource(
-        "x86-ubuntu-18.04-img",
-        resource_directory=args.resource_directory,
-        resource_version="1.0.0",
+        "x86-ubuntu-18.04-img", resource_directory=args.resource_directory
     ),
     readfile_contents=dedent(
         """

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021, 2024 Arm Limited
+ * Copyright (c) 2020-2021 ARM Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -84,7 +84,6 @@ class RubyRequest : public Message
     // explicitly set to true in the program in order to bypass caches
     bool m_isGLCSet;
     bool m_isSLCSet;
-    bool m_isSecure;
 
     RubyRequest(Tick curTime, uint64_t _paddr, int _len,
         uint64_t _pc, RubyRequestType _type, RubyAccessMode _access_mode,
@@ -102,8 +101,7 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0),
-          m_isSecure(m_pkt ? m_pkt->req->isSecure() : false)
+          m_tlbiTransactionUid(0)
     {
         m_LineAddress = makeLineAddress(m_PhysicalAddress);
         if (_pkt) {
@@ -131,8 +129,7 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0),
-          m_isSecure(m_pkt->req->isSecure())
+          m_tlbiTransactionUid(0)
     {
         assert(m_pkt->req->isMemMgmt());
         if (_pkt) {
@@ -167,8 +164,7 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0),
-          m_isSecure(m_pkt->req->isSecure())
+          m_tlbiTransactionUid(0)
     {
         m_LineAddress = makeLineAddress(m_PhysicalAddress);
         if (_pkt) {
@@ -204,8 +200,7 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0),
-          m_isSecure(m_pkt->req->isSecure())
+          m_tlbiTransactionUid(0)
     {
         m_LineAddress = makeLineAddress(m_PhysicalAddress);
         if (_pkt) {

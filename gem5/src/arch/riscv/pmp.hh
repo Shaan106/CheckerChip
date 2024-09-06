@@ -46,9 +46,6 @@
 namespace gem5
 {
 
-namespace RiscvISA
-{
-
 /**
  * This class helps to implement RISCV's physical memory
  * protection (pmp) primitive.
@@ -128,7 +125,7 @@ class PMP : public SimObject
      * @return Fault.
      */
     Fault pmpCheck(const RequestPtr &req, BaseMMU::Mode mode,
-                  PrivilegeMode pmode, ThreadContext *tc,
+                  RiscvISA::PrivilegeMode pmode, ThreadContext *tc,
                   Addr vaddr = 0);
 
     /**
@@ -166,7 +163,7 @@ class PMP : public SimObject
      * @param tc thread context.
      * @return true or false.
      */
-    bool shouldCheckPMP(PrivilegeMode pmode, ThreadContext *tc);
+    bool shouldCheckPMP(RiscvISA::PrivilegeMode pmode, ThreadContext *tc);
 
     /**
      * createAddrfault creates an address fault
@@ -208,7 +205,6 @@ class PMP : public SimObject
 
 };
 
-} // namespace RiscvISA
 } // namespace gem5
 
 #endif // __ARCH_RISCV_PMP_HH__

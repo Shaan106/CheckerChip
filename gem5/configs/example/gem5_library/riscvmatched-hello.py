@@ -49,9 +49,7 @@ requires(isa_required=ISA.RISCV)
 board = RISCVMatchedBoard()
 
 # set the hello world riscv binary as the board workload
-board.set_se_binary_workload(
-    obtain_resource("riscv-hello", resource_version="1.0.0")
-)
+board.set_se_binary_workload(obtain_resource("riscv-hello"))
 
 # run the simulation with the RISCV Matched board
 simulator = Simulator(board=board, full_system=False)

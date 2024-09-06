@@ -81,9 +81,8 @@ structure(CoherenceMsg, desc="...", interface="Message") {
   PrefetchBit Prefetch,         desc="Is this a prefetch request";
 
   bool functionalRead(Packet *pkt) {
-    // Valid data block is only present in message with following types
-    if (Class == CoherenceClass:PUTX ||
-        Class == CoherenceClass:DATA_EXCLUSIVE) {
+    // Only PUTX messages contains the data block
+    if (Class == CoherenceClass:PUTX) {
         return testAndRead(addr, DataBlk, pkt);
     }
 

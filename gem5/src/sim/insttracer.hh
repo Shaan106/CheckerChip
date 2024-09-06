@@ -232,38 +232,14 @@ class InstRecord
     setData(const RegClass &reg_class, RegVal val)
     {
         new(&data.asReg) InstResult(reg_class, val);
-        switch (reg_class.type()) {
-            case IntRegClass:
-            case MiscRegClass:
-            case CCRegClass:
-                dataStatus = DataInt64;
-                break;
-            case FloatRegClass:
-                dataStatus = DataDouble;
-                break;
-            default:
-                dataStatus = DataReg;
-                break;
-        }
+        dataStatus = DataReg;
     }
 
     void
     setData(const RegClass &reg_class, const void *val)
     {
         new(&data.asReg) InstResult(reg_class, val);
-        switch (reg_class.type()) {
-            case IntRegClass:
-            case MiscRegClass:
-            case CCRegClass:
-                dataStatus = DataInt64;
-                break;
-            case FloatRegClass:
-                dataStatus = DataDouble;
-                break;
-            default:
-                dataStatus = DataReg;
-                break;
-        }
+        dataStatus = DataReg;
     }
 
     void

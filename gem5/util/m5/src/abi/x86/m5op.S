@@ -43,9 +43,3 @@
 #define M5OP(name, func) m5op_func name, func;
         M5OP_FOREACH
 #undef M5OP
-
-/* The line below is added to remove the warning
-* saying that the file is not specifiying GNU non
-* executable stack in ubuntu 24.04
-*/
-.section .note.GNU-stack

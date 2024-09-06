@@ -185,12 +185,10 @@ board.set_kernel_disk_workload(
     # The x86 linux kernel will be automatically downloaded to the
     # `~/.cache/gem5` directory if not already present.
     # PARSEC benchamarks were tested with kernel version 4.19.83
-    kernel=obtain_resource(
-        "x86-linux-kernel-4.19.83", resource_version="1.0.0"
-    ),
+    kernel=obtain_resource("x86-linux-kernel-4.19.83"),
     # The x86-parsec image will be automatically downloaded to the
     # `~/.cache/gem5` directory if not already present.
-    disk_image=obtain_resource("x86-parsec", resource_version="1.0.0"),
+    disk_image=obtain_resource("x86-parsec"),
     readfile_contents=command,
 )
 

@@ -38,7 +38,6 @@
 #include "debug/GPUVRF.hh"
 #include "gpu-compute/compute_unit.hh"
 #include "gpu-compute/gpu_dyn_inst.hh"
-#include "gpu-compute/register_file_cache.hh"
 #include "gpu-compute/simple_pool_manager.hh"
 #include "gpu-compute/wavefront.hh"
 #include "params/VectorRegisterFile.hh"
@@ -59,40 +58,29 @@ VectorRegisterFile::VectorRegisterFile(const VectorRegisterFileParams &p)
 bool
 VectorRegisterFile::operandsReady(Wavefront *w, GPUDynInstPtr ii) const
 {
-    bool src_ready = true, dst_ready=true;
     for (const auto& srcVecOp : ii->srcVecRegOperands()) {
         for (const auto& physIdx : srcVecOp.physIndices()) {
-            if (regBusy(physIdx) &&
-                    !computeUnit->rfc[simdId]->inRFC(physIdx)) {
+            if (regBusy(physIdx)) {
                 DPRINTF(GPUVRF, "RAW stall: WV[%d]: %s: physReg[%d]\n",
                         w->wfDynId, ii->disassemble(), physIdx);
                 w->stats.numTimesBlockedDueRAWDependencies++;
-                src_ready = false;
-                break;
+                return false;
             }
-        }
-        if (!src_ready) {
-            break;
         }
     }
 
     for (const auto& dstVecOp : ii->dstVecRegOperands()) {
         for (const auto& physIdx : dstVecOp.physIndices()) {
-            if (regBusy(physIdx) &&
-                    !computeUnit->rfc[simdId]->inRFC(physIdx)) {
+            if (regBusy(physIdx)) {
                 DPRINTF(GPUVRF, "WAX stall: WV[%d]: %s: physReg[%d]\n",
                         w->wfDynId, ii->disassemble(), physIdx);
                 w->stats.numTimesBlockedDueWAXDependencies++;
-                dst_ready = false;
-                break;
+                return false;
             }
-        }
-        if (!dst_ready) {
-            break;
         }
     }
 
-    return src_ready && dst_ready;
+    return true;
 }
 
 void
@@ -125,22 +113,6 @@ VectorRegisterFile::waveExecuteInst(Wavefront *w, GPUDynInstPtr ii)
     // increment count of number of DWords read from VRF
     int DWords = ii->numSrcVecDWords();
     stats.registerReads += (DWords * w->execMask().count());
-
-    for (const auto& dstVecOp : ii->dstVecRegOperands()) {
-        for (const auto& physIdx : dstVecOp.physIndices()) {
-            if (computeUnit->rfc[simdId]->inRFC(physIdx)) {
-                stats.rfc_cache_write_hits += w->execMask().count();
-            }
-        }
-    }
-
-    for (const auto& srcVecOp : ii->srcVecRegOperands()) {
-        for (const auto& physIdx : srcVecOp.physIndices()) {
-            if (computeUnit->rfc[simdId]->inRFC(physIdx)) {
-                stats.rfc_cache_read_hits += w->execMask().count();
-            }
-        }
-    }
 
     uint64_t mask = w->execMask().to_ullong();
     int srams = w->execMask().size() / 4;

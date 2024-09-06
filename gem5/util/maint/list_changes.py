@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2017-2018, 2024 Arm Limited
+# Copyright (c) 2017-2018 Arm Limited
 # All rights reserved
 #
 # The license below extends only to copyright in the software and shall
@@ -88,20 +88,20 @@ class Commit:
         return self._tags
 
     @property
-    def change_ids(self):
-        """Get the Change-Id tag(s) from the commit
+    def change_id(self):
+        """Get the Change-Id tag from the commit
 
-        Returns: A list of change IDs. May be empty if no change IDs
-        have been specified.
+        Returns: A change ID or None if no change ID has been
+        specified.
 
         """
-
         try:
             cids = self.tags["Change-Id"]
         except KeyError:
-            return list()
+            return None
 
-        return cids[:]
+        assert len(cids) == 1
+        return cids[0]
 
     def __str__(self):
         return f"{self.rev[0:8]}: {self.log[0]}"
@@ -137,26 +137,32 @@ def list_changes(upstream, feature, paths=[]):
     feature_revs = tuple(list_revs(upstream, feature, paths=paths))
     upstream_revs = tuple(list_revs(feature, upstream, paths=paths))
 
-    feature_cids = {cid: c for c in feature_revs for cid in c.change_ids}
-    upstream_cids = {cid: c for c in upstream_revs for cid in c.change_ids}
+    feature_cids = {
+        c.change_id: c for c in feature_revs if c.change_id is not None
+    }
+    upstream_cids = {
+        c.change_id: c for c in upstream_revs if c.change_id is not None
+    }
 
     incoming = [
         r
         for r in reversed(upstream_revs)
-        if any(rcid not in feature_cids for rcid in r.change_ids)
+        if r.change_id and r.change_id not in feature_cids
     ]
     outgoing = [
         r
         for r in reversed(feature_revs)
-        if any(rcid not in upstream_cids for rcid in r.change_ids)
+        if r.change_id and r.change_id not in upstream_cids
     ]
     common = [
-        r
-        for r in reversed(feature_revs)
-        if any(rcid in upstream_cids for rcid in r.change_ids)
+        r for r in reversed(feature_revs) if r.change_id in upstream_cids
     ]
-    upstream_unknown = [r for r in reversed(upstream_revs) if not r.change_ids]
-    feature_unknown = [r for r in reversed(feature_revs) if not r.change_ids]
+    upstream_unknown = [
+        r for r in reversed(upstream_revs) if r.change_id is None
+    ]
+    feature_unknown = [
+        r for r in reversed(feature_revs) if r.change_id is None
+    ]
 
     return incoming, outgoing, common, upstream_unknown, feature_unknown
 
@@ -246,12 +252,12 @@ def _main():
         print("Incorrectly rebased changes:")
         all_upstream_revs = list_revs(args.upstream, paths=args.paths)
         all_upstream_cids = {
-            cid: c for c in all_upstream_revs for cid in c.change_ids
+            c.change_id: c
+            for c in all_upstream_revs
+            if c.change_id is not None
         }
         incorrect_outgoing = [
-            r
-            for r in outgoing
-            if any(rcid in all_upstream_cids for rcid in r.change_ids)
+            r for r in outgoing if r.change_id in all_upstream_cids
         ]
         for rev in incorrect_outgoing:
             print(rev)

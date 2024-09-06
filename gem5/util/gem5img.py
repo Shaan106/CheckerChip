@@ -194,8 +194,7 @@ def findPartOffset(devFile, fileName, partition):
         r"\s*:\s*"  # Separator
         r"start=\s*(?P<start>\d+),\s*"  # Partition start record
         r"size=\s*(?P<size>\d+),\s*"  # Partition size record
-        r"type=(?P<type>.+?),*?"  # Partition type record
-        r".*"  # anything else, e.g., name field
+        r"type=(?P<type>\d+)"  # Partition type record
         r"\s*$"  # End of line
     )
     lines = out.splitlines()

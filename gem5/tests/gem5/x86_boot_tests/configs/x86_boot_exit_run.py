@@ -184,9 +184,7 @@ if args.boot_type == "init":
 
 # Set the workload.
 workload = obtain_resource(
-    "x86-ubuntu-18.04-boot",
-    resource_directory=args.resource_directory,
-    resource_version="2.0.0",
+    "x86-ubuntu-18.04-boot", resource_directory=args.resource_directory
 )
 workload.set_parameter("kernel_args", kernal_args)
 motherboard.set_workload(workload)
@@ -201,9 +199,9 @@ print("Beginning simulation!")
 simulator = Simulator(board=motherboard)
 
 if args.tick_exit:
-    simulator.set_max_ticks(args.tick_exit)
-
-simulator.run()
+    simulator.run(max_ticks=args.tick_exit)
+else:
+    simulator.run()
 
 print(
     "Exiting @ tick {} because {}.".format(
