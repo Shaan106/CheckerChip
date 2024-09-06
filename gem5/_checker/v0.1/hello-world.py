@@ -19,8 +19,8 @@ memory = SingleChannelDDR3_1600("1GiB")
 #processor
 #single core processor, 1 timing CPU processor
 #timing is what type of gem5 simulation (also atomic etc)
-processor = SimpleProcessor(cpu_type=CPUTypes.O3
-                            , num_cores=1, isa=ISA.X86)
+processor = SimpleProcessor(cpu_type=CPUTypes.O3, num_cores=1, isa=ISA.X86)
+# processor = SimpleProcessor(cpu_type=CPUTypes.TIMING, num_cores=1, isa=ISA.X86)
 # ./build/X86/gem5.opt --debug-flags=Commit _checker/v0.1/hello-world.py
 # setting ISA not in tutorial, checked actual files to fix.
 
