@@ -1,8 +1,12 @@
 #include "v1.1/custom_sim_object.hh"
 #include "base/trace.hh"
+#include "base/logging.hh"
 #include "debug/CustomSimObjectFlag.hh"
 
-#include <iostream>
+// including connected sim object
+// #include "v1.1/reciever_sim_object.hh"
+
+// #include <iostream>
 
 namespace gem5
 {
@@ -12,10 +16,13 @@ CustomSimObject::CustomSimObject(const CustomSimObjectParams &params) :
     // event([this]{processEvent();}, name()) - [this] is a lambda capture list, {processEvent();} is the lambda body, name() is the name of the SimObject
     SimObject(params), 
     event([this]{processEvent();}, name()),
-    latency(100), // custom defined parameter, passing in a value here
-    timesLeft(10)
+    goodbye(params.goodbye_object), 
+    myName(params.name),
+    latency(params.time_to_wait), // this is a value passed in from the python config file
+    timesLeft(params.number_of_fires)
 {
-    DPRINTF(CustomSimObjectFlag, "Created the customSimObject\n");
+    DPRINTF(CustomSimObjectFlag, "Created the CustomSimObject with the name %s\n", myName);
+    panic_if(!goodbye, "CustomSimObject must have a non-null GoodbyeObject");
 }
 
 // for the event to be processed, we first have to schedule the event. 
@@ -25,7 +32,7 @@ void
 CustomSimObject::startup()
 {
     // we simply schedule the event to execute at tick 100. Normally, you would use some offset from curTick(), but since we know the startup() function is called when the time is currently 0, we can use an explicit tick value.
-    schedule(event, 100);
+    schedule(event, latency);
 
 }
 
@@ -37,6 +44,8 @@ CustomSimObject::processEvent()
 
     if (timesLeft <= 0) {
         DPRINTF(CustomSimObjectFlag, "Done firing!\n");
+        
+        goodbye->sayGoodbye(myName); // calling the sayGoodbye function from the recieverSimObject (connected object)
     } else {
         schedule(event, curTick() + latency);
     }
