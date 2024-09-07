@@ -9,8 +9,20 @@ namespace gem5
 
 class CustomSimObject : public SimObject
 {
+
+  private:
+    void processEvent();
+
+    EventFunctionWrapper event;
+
+    const Tick latency;
+
+    int timesLeft;
+  
   public:
     CustomSimObject(const CustomSimObjectParams &params);
+
+    void startup() override;
 };
 
 } // namespace gem5

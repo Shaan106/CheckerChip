@@ -910,7 +910,7 @@ Commit::commitInsts()
 
     // TAG 01
     // added a debug output
-    std::cout << "\n\nInstruction committing!\n\n" << std::endl;
+    // std::cout << "\n\nInstruction committing!\n\n" << std::endl;
 
     DPRINTF(Commit, "Trying to commit instructions in the ROB.\n");
 
