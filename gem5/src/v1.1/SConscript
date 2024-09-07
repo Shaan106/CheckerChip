@@ -1,9 +1,13 @@
-# import all the default configurations
+# build file for scons
+# this file is used to specify what to build for gem5.opt
+
 Import('*')
 
+SimObject('CustomSimObject.py', 
+          sim_objects=['CustomSimObject', 'GoodbyeObject'])
 
-SimObject('CustomSimObject.py', sim_objects=['CustomSimObject'])
-# custom sim object source file
 Source('custom_sim_object.cc')
+Source('goodbye_object.cc')
+
 # debug flag specifically for our custom sim object
 DebugFlag('CustomSimObjectFlag') 
