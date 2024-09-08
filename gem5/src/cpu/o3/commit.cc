@@ -906,11 +906,8 @@ Commit::commitInsts()
     // things at the same time...
     ////////////////////////////////////
 
-    // scons build/X86/gem5.opt -j40
-
     // TAG 01
-    // added a debug output
-    // std::cout << "\n\nInstruction committing!\n\n" << std::endl;
+    // This is the main commit loop. It will commit instructions
 
     DPRINTF(Commit, "Trying to commit instructions in the ROB.\n");
 
@@ -975,6 +972,8 @@ Commit::commitInsts()
             set(pc[tid], head_inst->pcState());
 
             // Try to commit the head instruction.
+            // TAG 02: I think this is where the instruction is actually committed
+            // commit_success is true if the instruction was able to be committed
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
@@ -1106,6 +1105,14 @@ bool
 Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 {
     assert(head_inst);
+
+    // std::string message = "hi";
+
+    // TAG pushCommit
+
+    DPRINTF(Commit, "--------------------------------------------------------------------------\n");
+
+    cc_buffer->pushCommit();
 
     ThreadID tid = head_inst->threadNumber;
 
@@ -1243,6 +1250,11 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     }
 
     updateComInstStats(head_inst);
+
+    //TAG 03: This is where the instruction is actually committed
+    // so we want to send to checker chip before this point, so we have done the checks by the ooo
+    // to make sure inst is commitable before we actually commit it
+    // but here we stall when lack of credits.
 
     DPRINTF(Commit,
             "[tid:%i] [sn:%llu] Committing instruction with PC %s\n",

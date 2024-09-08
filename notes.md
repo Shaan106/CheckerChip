@@ -23,3 +23,6 @@ only top few statements: `./build/X86/gem5.opt --debug-flags=Commit _checker/v0.
 use new custom debug flag with `./build/X86/gem5.opt --debug-flags=CustomSimObjectFlag `
 ## other
 [gem5 cpu docs](https://www.gem5.org/documentation/general_docs/cpu_models/O3CPU##Pipeline-stages)
+
+
+- start with sending message from commit to the custom sim object and then printing the message

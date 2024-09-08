@@ -1,0 +1,12 @@
+# build file for scons
+# this file is used to specify what to build for gem5.opt
+
+Import('*')
+
+SimObject('CC_Buffer.py', 
+          sim_objects=['CC_Buffer'])
+
+Source('cc_buffer.cc')
+
+# debug flag specifically for our custom sim object
+DebugFlag('CC_Buffer_Flag') 
