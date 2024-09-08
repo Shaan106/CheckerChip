@@ -4,11 +4,12 @@
 #include "base/trace.hh"
 #include "base/logging.hh"
 #include "debug/CC_Buffer_Flag.hh"
-// #include "debug/Commit.hh"
 
 #include "sim/sim_exit.hh"
 
 #include <iostream>
+
+#include <deque> //new
 
 namespace gem5
 {
@@ -20,7 +21,10 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     SimObject(params), 
     event([this]{ processEvent(); }, name() + ".event")
 {
-    std::cout << "created the buffer object" << std::endl;
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
+
+    // Initialize the buffer
+    buffer = std::deque<std::string>();  // Initialize an empty deque for now
 }
 
 CC_Buffer::~CC_Buffer()
@@ -45,11 +49,27 @@ CC_Buffer::pushCommit(const std::string &instName)
 
     DPRINTF(CC_Buffer_Flag, "instName: %s\n", instName.c_str());
 
+    // Add the string to the buffer
+    buffer.push_back(instName);
 
-    // schedule(event, curTick() + 1000);
+    // Ensure the buffer size does not exceed 20
+    const int maxBufferSize = 20;
+    if (buffer.size() > maxBufferSize) {
+        buffer.pop_front();  // Remove the oldest entry to keep the buffer size at 20
+    }
 
+    //print buffer contents for debug
+    std::string bufferContents = "[";
+    for (auto it = buffer.begin(); it != buffer.end(); ++it) {
+        bufferContents += *it;
+        if (std::next(it) != buffer.end()) {
+            bufferContents += ", ";
+        }
+    }
+    bufferContents += "]";
 
-    // message = "Goodbye " + other_name + "!! ";
+    // Output the buffer contents in one line
+    DPRINTF(CC_Buffer_Flag, "Current buffer contents: %s\n", bufferContents.c_str());
 
     linkedFunc();
 }

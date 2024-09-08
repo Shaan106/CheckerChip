@@ -6,6 +6,8 @@ class CC_Buffer(SimObject):
     cxx_header = "checker_chip/cc_buffer.hh"
     cxx_class = "gem5::CC_Buffer"
 
+    buffer_size = Param.Int(20, "Max Credits. How many items the buffer can hold")
+
     # buffer_size = Param.MemorySize(
     #     "1kB", "Size of buffer to fill with goodbye"
     # )
