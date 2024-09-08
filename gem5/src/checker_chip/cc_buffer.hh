@@ -1,8 +1,8 @@
-
 #ifndef __CC_BUFFER_HH__
 #define __CC_BUFFER_HH__
 
 #include <string>
+#include <deque>  // Include deque for buffer storage
 
 #include "params/CC_Buffer.hh"
 #include "sim/sim_object.hh"
@@ -25,36 +25,25 @@ class CC_Buffer : public SimObject
      * Fills the buffer for one iteration. If the buffer isn't full, this
      * function will enqueue another event to continue filling.
      */
-     void linkedFunc();
-    // void fillBuffer();
+    void linkedFunc();
 
-    /// The bytes processed per tick
-    // float bandwidth;
+    /// A deque to hold the stack of strings (buffer)
+    std::deque<std::string> buffer;
 
-    /// The size of the buffer we are going to fill
-    // int bufferSize;
-
-    /// The buffer we are putting our message in
-    // char *buffer;
-
-    /// The message to put into the buffer.
-    // std::string message;
-
-    /// The amount of the buffer we've used so far.
-    // int bufferUsed;
+    /// The maximum size of the buffer
+    static const int maxBufferSize = 20;
 
   public:
     CC_Buffer(const CC_BufferParams &p);
-    ~CC_Buffer(); /// this is a destructor
+    ~CC_Buffer(); /// Destructor
 
     /**
      * Called by an outside object. Starts off the events to fill the buffer
      * with a goodbye message.
      *
-     * @param name the name of the object we are saying goodbye to.
+     * @param instName the name of the instruction to be added to the buffer.
      */
-     void pushCommit(const std::string &instName);
-    // void pushCommit(std::string name);
+    void pushCommit(const std::string &instName);
     
 };
 
