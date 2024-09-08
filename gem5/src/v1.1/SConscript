@@ -3,11 +3,18 @@
 
 Import('*')
 
+SimObject('GoodbyeObject.py',
+            sim_objects=['GoodbyeObject'])
+
+Source('goodbye_object.cc')
+
 SimObject('CustomSimObject.py', 
-          sim_objects=['CustomSimObject', 'GoodbyeObject'])
+          sim_objects=['CustomSimObject'])
+
+
 
 Source('custom_sim_object.cc')
-Source('goodbye_object.cc')
+
 
 # debug flag specifically for our custom sim object
 DebugFlag('CustomSimObjectFlag') 

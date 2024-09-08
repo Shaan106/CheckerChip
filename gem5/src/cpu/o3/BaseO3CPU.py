@@ -46,6 +46,10 @@ from m5.params import *
 from m5.proxy import *
 
 
+# TAG import cc_buffer into o3 chip defn
+from m5.objects.CC_Buffer import CC_Buffer
+
+
 class SMTFetchPolicy(ScopedEnum):
     vals = ["RoundRobin", "Branch", "IQCount", "LSQCount"]
 
@@ -191,3 +195,7 @@ class BaseO3CPU(BaseCPU):
         TournamentBP(numThreads=Parent.numThreads), "Branch Predictor"
     )
     needsTSO = Param.Bool(False, "Enable TSO Memory model")
+
+
+    # TAG add cc_buffer to BaseO3CPU, default init to an instance
+    cc_buffer = Param.CC_Buffer(CC_Buffer(), "A CC_Buffer object, default initialized")

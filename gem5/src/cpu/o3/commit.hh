@@ -56,6 +56,9 @@
 #include "enums/CommitPolicy.hh"
 #include "sim/probe/probe.hh"
 
+// TAG include cc_buffer
+#include "checker_chip/cc_buffer.hh"
+
 namespace gem5
 {
 
@@ -112,6 +115,13 @@ class Commit
     };
 
   private:
+
+    /* TAG test message */
+    // std::string message;
+
+    /* TAG define cc_buffer*/
+    CC_Buffer* cc_buffer;
+
     /** Overall commit status. */
     CommitStatus _status;
     /** Next commit status, to be set at the end of the cycle. */
