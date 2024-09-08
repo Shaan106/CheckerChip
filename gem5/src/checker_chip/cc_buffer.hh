@@ -25,6 +25,7 @@ class CC_Buffer : public SimObject
      * Fills the buffer for one iteration. If the buffer isn't full, this
      * function will enqueue another event to continue filling.
      */
+     void linkedFunc();
     // void fillBuffer();
 
     /// The bytes processed per tick
