@@ -67,6 +67,8 @@
 #include "sim/faults.hh"
 #include "sim/full_system.hh"
 
+// TAG
+#include "debug/CC_Buffer_Flag.hh"
 
 namespace gem5
 {
@@ -97,7 +99,8 @@ Commit::Commit(CPU *_cpu, const BaseO3CPUParams &params)
       trapLatency(params.trapLatency),
       canHandleInterrupts(true),
       avoidQuiesceLiveLock(false),
-      stats(_cpu, this)
+      stats(_cpu, this),
+      cc_buffer(params.cc_buffer) // TAG add the input parameter to the constructor
 {
     if (commitWidth > MaxWidth)
         fatal("commitWidth (%d) is larger than compiled limit (%d),\n"
@@ -1111,6 +1114,8 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     // TAG pushCommit
 
     DPRINTF(Commit, "--------------------------------------------------------------------------\n");
+
+    DPRINTF(CC_Buffer_Flag, "--------------------------------cristiano ronaldo------------------------------------------\n");
 
     cc_buffer->pushCommit();
 
