@@ -24,7 +24,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
     // Initialize the buffer
-    buffer = std::deque<std::string>();  // Initialize an empty deque for now
+    buffer = std::deque<StaticInstPtr>();  // Initialize an empty deque for now
 }
 
 CC_Buffer::~CC_Buffer()
@@ -40,14 +40,15 @@ CC_Buffer::processEvent()
 }
 
 void
-CC_Buffer::pushCommit(const std::string &instName)
+// CC_Buffer::pushCommit(const std::string &instName)
+CC_Buffer::pushCommit(const StaticInstPtr &instName)
 {
     // std::cout << "hi" << std::endl;
 
 
     DPRINTF(CC_Buffer_Flag, "Debug statement??\n");
 
-    DPRINTF(CC_Buffer_Flag, "instName: %s\n", instName.c_str());
+    DPRINTF(CC_Buffer_Flag, "instName: %s\n", instName->getName().c_str());
 
     // Add the string to the buffer
     buffer.push_back(instName);
@@ -61,7 +62,7 @@ CC_Buffer::pushCommit(const std::string &instName)
     //print buffer contents for debug
     std::string bufferContents = "[";
     for (auto it = buffer.begin(); it != buffer.end(); ++it) {
-        bufferContents += *it;
+        bufferContents += (*it)->getName();
         if (std::next(it) != buffer.end()) {
             bufferContents += ", ";
         }

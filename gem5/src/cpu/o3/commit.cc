@@ -1121,7 +1121,12 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
     // cc_buffer->pushCommit();
 
-    cc_buffer->pushCommit(head_inst->staticInst->getName());
+    // cc_buffer->pushCommit(inst_copy->staticInst->getName());
+
+    cc_buffer->pushCommit(head_inst->staticInst);
+
+
+    // like do if inst.id == verified then continue?
 
     ThreadID tid = head_inst->threadNumber;
 
