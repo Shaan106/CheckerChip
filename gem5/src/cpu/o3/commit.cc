@@ -1115,9 +1115,13 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
     DPRINTF(Commit, "--------------------------------------------------------------------------\n");
 
-    DPRINTF(CC_Buffer_Flag, "--------------------------------cristiano ronaldo------------------------------------------\n");
+    DPRINTF(CC_Buffer_Flag, "--------------------------------cristiano ronaldo siuuuuu------------------------------------------\n");
 
-    cc_buffer->pushCommit();
+    //head_inst->staticInst->getName()
+
+    // cc_buffer->pushCommit();
+
+    cc_buffer->pushCommit(head_inst->staticInst->getName());
 
     ThreadID tid = head_inst->threadNumber;
 

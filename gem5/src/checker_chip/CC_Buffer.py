@@ -29,12 +29,3 @@ class CC_Buffer(SimObject):
     cc_buffer->pushCommit(name());
     goodbye->sayGoodbye(myName);
     '''
-    """
-    in CustomSimObject.py
-    goodbye_object = Param.GoodbyeObject("A goodbye object")
-
-    in custom_sim.hh
-    #include "v1.1/goodbye_object.hh"
-    and
-    GoodbyeObject* goodbye;
-    """

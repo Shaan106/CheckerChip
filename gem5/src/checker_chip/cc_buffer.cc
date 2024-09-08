@@ -36,15 +36,17 @@ CC_Buffer::processEvent()
 }
 
 void
-CC_Buffer::pushCommit()
+CC_Buffer::pushCommit(const std::string &instName)
 {
-    std::cout << "hi" << std::endl;
+    // std::cout << "hi" << std::endl;
 
 
     DPRINTF(CC_Buffer_Flag, "Debug statement??\n");
 
+    DPRINTF(CC_Buffer_Flag, "instName: %s\n", instName.c_str());
 
-    schedule(event, curTick() + 3);
+
+    // schedule(event, curTick() + 1000);
 
 
     // message = "Goodbye " + other_name + "!! ";
@@ -55,7 +57,8 @@ CC_Buffer::pushCommit()
 void 
 CC_Buffer::linkedFunc()
 {
-    std::cout << "linkedFunc called" << std::endl;
+    // std::cout << "linkedFunc called" << std::endl;
+    DPRINTF(CC_Buffer_Flag, "debug statement from linked func\n");
 }
 
 

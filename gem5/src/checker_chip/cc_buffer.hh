@@ -53,7 +53,7 @@ class CC_Buffer : public SimObject
      *
      * @param name the name of the object we are saying goodbye to.
      */
-     void pushCommit();
+     void pushCommit(const std::string &instName);
     // void pushCommit(std::string name);
     
 };
