@@ -7,6 +7,8 @@
 #include "params/CC_Buffer.hh"
 #include "sim/sim_object.hh"
 
+#include "cpu/static_inst.hh"
+
 namespace gem5
 {
 
@@ -28,10 +30,11 @@ class CC_Buffer : public SimObject
     void linkedFunc();
 
     /// A deque to hold the stack of strings (buffer)
-    std::deque<std::string> buffer;
+    // std::deque<std::string> buffer;
+    std::deque<StaticInstPtr> buffer;
 
     /// The maximum size of the buffer
-    static const int maxBufferSize = 20;
+    static const int maxBufferSize;
 
   public:
     CC_Buffer(const CC_BufferParams &p);
@@ -43,7 +46,8 @@ class CC_Buffer : public SimObject
      *
      * @param instName the name of the instruction to be added to the buffer.
      */
-    void pushCommit(const std::string &instName);
+    // void pushCommit(const std::string &instName); gem5::RefCountingPtr<gem5::o3::DynInst>
+    void pushCommit(const StaticInstPtr &instName);
     
 };
 
