@@ -8,6 +8,7 @@
 #include "sim/sim_object.hh"
 
 #include "cpu/static_inst.hh"
+// #include "cpu/o3/dyn_inst_ptr.hh"
 
 namespace gem5
 {
@@ -34,7 +35,10 @@ class CC_Buffer : public SimObject
     std::deque<StaticInstPtr> buffer;
 
     /// The maximum size of the buffer
-    static const int maxBufferSize;
+    int maxCredits;
+
+    // current number of credits
+    int currentCredits;
 
   public:
     CC_Buffer(const CC_BufferParams &p);
@@ -48,6 +52,11 @@ class CC_Buffer : public SimObject
      */
     // void pushCommit(const std::string &instName); gem5::RefCountingPtr<gem5::o3::DynInst>
     void pushCommit(const StaticInstPtr &instName);
+
+    /**
+     * Returns the number of credits in the buffer.
+    */
+    int getNumCredits();
     
 };
 
