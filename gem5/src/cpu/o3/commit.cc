@@ -1117,7 +1117,18 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
     if (cc_buffer->getNumCredits() > 0) {
         DPRINTF(CC_Buffer_Flag, "-----------------------------------Sending to the cc_buffer---------------------------------------\n");
+        DPRINTF(CC_Buffer_Flag, "instruction num src reg:%d\n",head_inst->staticInst->numSrcRegs());
         cc_buffer->pushCommit(head_inst->staticInst);
+    } else {
+
+        // while(cc_buffer->getNumCredits() <= 0) {
+        //     // DPRINTF(CC_Buffer_Flag, "Waiting for credits, CPU Stalled\n");
+        //     stall_CPU()
+        // }
+
+        DPRINTF(CC_Buffer_Flag, "missed instruction: %s\n", head_inst->staticInst->getName());
+        
+        // cc_buffer->pushCommit(head_inst->staticInst);
     }
 
     ThreadID tid = head_inst->threadNumber;

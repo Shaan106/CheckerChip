@@ -46,8 +46,15 @@ CC_Buffer::~CC_Buffer()
 void
 CC_Buffer::processEvent()
 {
-    std::cout << "hi again..." << std::endl;
-
+    // std::cout << "hi again..." << std::endl;
+    DPRINTF(CC_Buffer_Flag, "Clearing buffer...\n");
+    // remove 4 elements from the front of the buffer
+    for (int i = 0; i < 10; i++) {
+        buffer.pop_front();
+    }
+    // increase num credits by 4
+    currentCredits += 10;
+    // buffer.pop_front();  // Remove the oldest entry to keep the buffer size at 20
 }
 
 void
@@ -68,14 +75,14 @@ CC_Buffer::pushCommit(const StaticInstPtr &instName)
     // Ensure the buffer size does not exceed 20
     // const int maxBufferSize = 20;
     if (buffer.size() >= maxCredits) {
-        DPRINTF(CC_Buffer_Flag, "Max credits reached, clearing half of buffer...\n");
-        // remove 4 elements from the front of the buffer
-        for (int i = 0; i < 10; i++) {
-            buffer.pop_front();
+        DPRINTF(CC_Buffer_Flag, "Max credits reached, scheduling buffer clear...\n");
+
+        // schedule event to clear buffer in 50000 ticks (the buffer "clear" delay)
+        if (!event.scheduled()) {
+            schedule(event, curTick() + 50000);
+        } else {
+            DPRINTF(CC_Buffer_Flag, "Event is already scheduled, skipping re-scheduling, maybe stall?\n");
         }
-        // increase num credits by 4
-        currentCredits += 10;
-        // buffer.pop_front();  // Remove the oldest entry to keep the buffer size at 20
     }
 
     //print buffer contents for debug
