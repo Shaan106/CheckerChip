@@ -1109,24 +1109,16 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 {
     assert(head_inst);
 
-    // std::string message = "hi";
-
     // TAG pushCommit
 
     DPRINTF(Commit, "--------------------------------------------------------------------------\n");
 
-    DPRINTF(CC_Buffer_Flag, "--------------------------------cristiano ronaldo siuuuuu------------------------------------------\n");
+    //DPRINTF(CC_Buffer_Flag, "--------------------------------num credits: %d------------------------------------------\n", cc_buffer->getNumCredits());
 
-    //head_inst->staticInst->getName()
-
-    // cc_buffer->pushCommit();
-
-    // cc_buffer->pushCommit(inst_copy->staticInst->getName());
-
-    cc_buffer->pushCommit(head_inst->staticInst);
-
-
-    // like do if inst.id == verified then continue?
+    if (cc_buffer->getNumCredits() > 0) {
+        DPRINTF(CC_Buffer_Flag, "-----------------------------------Sending to the cc_buffer---------------------------------------\n");
+        cc_buffer->pushCommit(head_inst->staticInst);
+    }
 
     ThreadID tid = head_inst->threadNumber;
 
