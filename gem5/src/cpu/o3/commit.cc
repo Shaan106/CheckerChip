@@ -1156,7 +1156,8 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
     // TAG stall - this is where the stalling of the CPU happens
     if (cc_buffer->getNumCredits() == 0) {
-      DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
+      //DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
+      //DPRINTF(CC_Buffer_Flag, "stall ");
       return false; // return false stalls the CPU
     }
 
@@ -1252,6 +1253,8 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     }
 
     // TAG pushCommit - the stall has already happened, this is where we push the item to the cc_buffer
+    // Cycles currentCycle = Cycles(clockEdge() / clockPeriod());
+    DPRINTF(CC_Buffer_Flag, "Current clock cycle commit o3: %lu\n", curTick());
     DPRINTF(CC_Buffer_Flag, "-----------------------------------Sending to the cc_buffer---------------------------------------\n");
     DPRINTF(CC_Buffer_Flag, "instruction num src reg:%d\n",head_inst->staticInst->numSrcRegs());
     // cc_buffer->pushCommit(head_inst->staticInst);
