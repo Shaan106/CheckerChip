@@ -9,6 +9,8 @@
 
 // #include "cpu/static_inst.hh"
 #include "cpu/o3/dyn_inst_ptr.hh"
+#include "cc_inst.hh"
+
 
 namespace gem5
 {
@@ -30,16 +32,19 @@ class CC_Buffer : public SimObject
      */
     void linkedFunc();
 
+    // Function that creates and returns a CheckerInst object
+    CheckerInst instantiateObject(const gem5::o3::DynInstPtr &instName);
+
     /// A deque to hold the stack of strings (buffer)
     // std::deque<std::string> buffer;
     // std::deque<StaticInstPtr> buffer;
     std::deque<gem5::o3::DynInstPtr> buffer;
 
     /// The maximum size of the buffer
-    int maxCredits;
+    uint maxCredits;
 
     // current number of credits
-    int currentCredits;
+    uint currentCredits;
 
   public:
     CC_Buffer(const CC_BufferParams &p);
@@ -58,7 +63,7 @@ class CC_Buffer : public SimObject
     /**
      * Returns the number of credits in the buffer.
     */
-    int getNumCredits();
+    uint getNumCredits();
     
 };
 
