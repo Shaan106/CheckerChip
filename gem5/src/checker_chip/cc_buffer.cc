@@ -11,11 +11,13 @@
 
 #include <iostream>
 
-#include <deque> //new
+#include <deque> 
+
+#include "cc_inst.hh" // for including new instruction class defn.
+
 
 namespace gem5
 {
-
 /*
 Constructor for the GoodbyeObject. 
 */
@@ -33,7 +35,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     currentCredits = maxCredits;
 }
 
-int
+uint
 CC_Buffer::getNumCredits()
 {
     return currentCredits;
@@ -59,11 +61,14 @@ CC_Buffer::processEvent()
 }
 
 void
-
 // CC_Buffer::pushCommit(const StaticInstPtr &instName)
 CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 {
     // std::cout << "hi" << std::endl;
+
+    CheckerInst obj = instantiateObject(instName);
+
+    DPRINTF(CC_Buffer_Flag, "obj attr: %d<--------\n", obj.getNumber());
 
     DPRINTF(CC_Buffer_Flag, "Debug statement... in cc_buffer now\n");
 
@@ -111,5 +116,17 @@ CC_Buffer::linkedFunc()
     DPRINTF(CC_Buffer_Flag, "debug statement from linked func\n");
 }
 
+CheckerInst 
+CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
+{
+    // Assuming instName->credits is an int
+    int credits = instName->staticInst->numSrcRegs(); // Access the credits attribute
+
+    // Create a CheckerInst object with credits as the parameter
+    CheckerInst obj(credits);
+
+    // Return the created CheckerInst object
+    return obj;
+}
 
 } // namespace gem5
