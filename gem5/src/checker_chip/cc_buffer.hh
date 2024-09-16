@@ -7,8 +7,8 @@
 #include "params/CC_Buffer.hh"
 #include "sim/sim_object.hh"
 
-#include "cpu/static_inst.hh"
-// #include "cpu/o3/dyn_inst_ptr.hh"
+// #include "cpu/static_inst.hh"
+#include "cpu/o3/dyn_inst_ptr.hh"
 
 namespace gem5
 {
@@ -32,7 +32,8 @@ class CC_Buffer : public SimObject
 
     /// A deque to hold the stack of strings (buffer)
     // std::deque<std::string> buffer;
-    std::deque<StaticInstPtr> buffer;
+    // std::deque<StaticInstPtr> buffer;
+    std::deque<gem5::o3::DynInstPtr> buffer;
 
     /// The maximum size of the buffer
     int maxCredits;
@@ -51,7 +52,8 @@ class CC_Buffer : public SimObject
      * @param instName the name of the instruction to be added to the buffer.
      */
     // void pushCommit(const std::string &instName); gem5::RefCountingPtr<gem5::o3::DynInst>
-    void pushCommit(const StaticInstPtr &instName);
+    // void pushCommit(const StaticInstPtr &instName);
+    void pushCommit(const gem5::o3::DynInstPtr &instName);
 
     /**
      * Returns the number of credits in the buffer.

@@ -1154,10 +1154,10 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
         return false;
     }
 
-    // TAG -  this is where the stalling of the CPU happens
+    // TAG stall - this is where the stalling of the CPU happens
     if (cc_buffer->getNumCredits() == 0) {
       DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
-      return false;
+      return false; // return false stalls the CPU
     }
 
     // Check if the instruction caused a fault.  If so, trap.
@@ -1254,7 +1254,8 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     // TAG pushCommit - the stall has already happened, this is where we push the item to the cc_buffer
     DPRINTF(CC_Buffer_Flag, "-----------------------------------Sending to the cc_buffer---------------------------------------\n");
     DPRINTF(CC_Buffer_Flag, "instruction num src reg:%d\n",head_inst->staticInst->numSrcRegs());
-    cc_buffer->pushCommit(head_inst->staticInst);
+    // cc_buffer->pushCommit(head_inst->staticInst);
+    cc_buffer->pushCommit(head_inst);
 
     //DO IT HERE TAG
     updateComInstStats(head_inst);
