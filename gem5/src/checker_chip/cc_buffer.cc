@@ -5,7 +5,7 @@
 #include "base/logging.hh"
 #include "debug/CC_Buffer_Flag.hh"
 
-// #include "cpu/o3/dyn_inst.hh"
+#include "cpu/o3/dyn_inst.hh"
 
 #include "sim/sim_exit.hh"
 
@@ -27,7 +27,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
     // Initialize the buffer
-    buffer = std::deque<StaticInstPtr>();  // Initialize an empty deque for now
+    // buffer = std::deque<StaticInstPtr>();  // Initialize an empty deque for now
+    buffer = std::deque<gem5::o3::DynInstPtr>();  // Initialize an empty deque for now
 
     currentCredits = maxCredits;
 }
@@ -58,14 +59,16 @@ CC_Buffer::processEvent()
 }
 
 void
-// CC_Buffer::pushCommit(const std::string &instName)
-CC_Buffer::pushCommit(const StaticInstPtr &instName)
+
+// CC_Buffer::pushCommit(const StaticInstPtr &instName)
+CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 {
     // std::cout << "hi" << std::endl;
 
     DPRINTF(CC_Buffer_Flag, "Debug statement... in cc_buffer now\n");
 
-    DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", instName->getName().c_str());
+    // DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", instName->getName().c_str());
+    DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", instName->staticInst->getName().c_str());
 
     // Add the string to the buffer
     buffer.push_back(instName);
@@ -88,7 +91,7 @@ CC_Buffer::pushCommit(const StaticInstPtr &instName)
     //print buffer contents for debug
     std::string bufferContents = "[";
     for (auto it = buffer.begin(); it != buffer.end(); ++it) {
-        bufferContents += (*it)->getName();
+        bufferContents += (*it)->staticInst->getName();
         if (std::next(it) != buffer.end()) {
             bufferContents += ", ";
         }
