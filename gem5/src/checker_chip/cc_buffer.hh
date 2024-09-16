@@ -5,17 +5,19 @@
 #include <deque>  // Include deque for buffer storage
 
 #include "params/CC_Buffer.hh"
-#include "sim/sim_object.hh"
+// #include "sim/sim_object.hh" // <--------- change to include "sim/clocked_object.hh"
+#include "sim/clocked_object.hh"
 
 // #include "cpu/static_inst.hh"
 #include "cpu/o3/dyn_inst_ptr.hh"
-#include "cc_inst.hh"
+#include "checker_chip/cc_inst.hh"
 
 
 namespace gem5
 {
 
-class CC_Buffer : public SimObject
+// class CC_Buffer : public SimObject // <--------- change to inherit from "ClockedObject"
+class CC_Buffer : public ClockedObject
 {
   private:
     /**
@@ -38,7 +40,7 @@ class CC_Buffer : public SimObject
     /// A deque to hold the stack of strings (buffer)
     // std::deque<std::string> buffer;
     // std::deque<StaticInstPtr> buffer;
-    std::deque<gem5::o3::DynInstPtr> buffer;
+    std::deque<CheckerInst> buffer;
 
     /// The maximum size of the buffer
     uint maxCredits;
