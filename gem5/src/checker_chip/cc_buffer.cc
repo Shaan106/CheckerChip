@@ -69,6 +69,7 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 
     CheckerInst checkerInst = instantiateObject(instName);
 
+<<<<<<< HEAD
     // Print the current simulation tick
     DPRINTF(CC_Buffer_Flag, "Current tick: %lu\n", curTick());
 
@@ -79,11 +80,17 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     // Compute and print the current clock cycle
     Cycles currentCycle = Cycles(clockEdge() / clockPeriod());
     DPRINTF(CC_Buffer_Flag, "Current clock cycle: %lu\n", currentCycle);
+=======
+    DPRINTF(CC_Buffer_Flag, "Debug statement... in cc_buffer now\n");
+>>>>>>> ed0c20ec39b666ec6dcf63a05dc063db132531a6
 
     // DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", instName->getName().c_str());
     DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> ed0c20ec39b666ec6dcf63a05dc063db132531a6
     // Add the string to the buffer
     buffer.push_back(checkerInst);
     // reduce num credits

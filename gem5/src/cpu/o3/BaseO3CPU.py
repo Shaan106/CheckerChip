@@ -198,5 +198,9 @@ class BaseO3CPU(BaseCPU):
 
 
     # TAG add cc_buffer to BaseO3CPU, default init to an instance
+<<<<<<< HEAD
     cc_buffer = Param.CC_Buffer(CC_Buffer(),
     "A CC_Buffer object, default initialized")
+=======
+    cc_buffer = Param.CC_Buffer(CC_Buffer(), "A CC_Buffer object, default initialized")
+>>>>>>> ed0c20ec39b666ec6dcf63a05dc063db132531a6
