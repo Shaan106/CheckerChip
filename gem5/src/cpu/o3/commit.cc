@@ -1109,13 +1109,6 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 {
     assert(head_inst);
 
-    // TAG pushCommit
-
-    DPRINTF(Commit, "--------------------------------------------------------------------------\n");
-
-    //DPRINTF(CC_Buffer_Flag, "--------------------------------num credits: %d------------------------------------------\n", cc_buffer->getNumCredits());
-
-
     ThreadID tid = head_inst->threadNumber;
 
     // If the instruction is not executed yet, then it will need extra
@@ -1160,6 +1153,8 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
         return false;
     }
+
+    // TAG -  this is where the stalling of the CPU happens
     if (cc_buffer->getNumCredits() == 0) {
       DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
       return false;
@@ -1252,14 +1247,16 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
         // Generate trap squash event.
         generateTrapEvent(tid, inst_fault);
-	    cc_buffer->pushTrap(tid, inst_fault);  //TAG: This needs to be implemented
+	    // cc_buffer->pushTrap(tid, inst_fault);  //TAG: This needs to be implemented
         return false;
     }
+
+    // TAG pushCommit - the stall has already happened, this is where we push the item to the cc_buffer
     DPRINTF(CC_Buffer_Flag, "-----------------------------------Sending to the cc_buffer---------------------------------------\n");
     DPRINTF(CC_Buffer_Flag, "instruction num src reg:%d\n",head_inst->staticInst->numSrcRegs());
     cc_buffer->pushCommit(head_inst->staticInst);
 
-//DO IT HERE TAG
+    //DO IT HERE TAG
     updateComInstStats(head_inst);
 
     //TAG 03: This is where the instruction is actually committed
