@@ -8,6 +8,7 @@
 #include "cpu/o3/dyn_inst.hh"
 
 #include "sim/sim_exit.hh"
+// #include "sim/clocked_object.hh"  // Include clocked_object instead of sim_object
 
 #include <iostream>
 
@@ -22,15 +23,15 @@ namespace gem5
 Constructor for the GoodbyeObject. 
 */
 CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
-    SimObject(params), 
+    ClockedObject(params),  // Change SimObject to ClockedObject
+    // SimObject(params), 
     event([this]{ processEvent(); }, name() + ".event"),
     maxCredits(params.maxCredits)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
     // Initialize the buffer
-    // buffer = std::deque<StaticInstPtr>();  // Initialize an empty deque for now
-    buffer = std::deque<gem5::o3::DynInstPtr>();  // Initialize an empty deque for now
+    buffer = std::deque<CheckerInst>();  // Initialize an empty deque for now
 
     currentCredits = maxCredits;
 }
@@ -66,22 +67,19 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 {
     // std::cout << "hi" << std::endl;
 
-    CheckerInst obj = instantiateObject(instName);
-
-    DPRINTF(CC_Buffer_Flag, "obj attr: %d<--------\n", obj.getNumber());
+    CheckerInst checkerInst = instantiateObject(instName);
 
     DPRINTF(CC_Buffer_Flag, "Debug statement... in cc_buffer now\n");
 
     // DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", instName->getName().c_str());
-    DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", instName->staticInst->getName().c_str());
+    DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
 
     // Add the string to the buffer
-    buffer.push_back(instName);
+    buffer.push_back(checkerInst);
     // reduce num credits
     currentCredits--;
 
     // Ensure the buffer size does not exceed 20
-    // const int maxBufferSize = 20;
     if (buffer.size() >= maxCredits) {
         DPRINTF(CC_Buffer_Flag, "Max credits reached, scheduling buffer clear...\n");
 
@@ -96,7 +94,7 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     //print buffer contents for debug
     std::string bufferContents = "[";
     for (auto it = buffer.begin(); it != buffer.end(); ++it) {
-        bufferContents += (*it)->staticInst->getName();
+        bufferContents += (*it).getStaticInst()->getName();
         if (std::next(it) != buffer.end()) {
             bufferContents += ", ";
         }
@@ -123,10 +121,11 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
     int credits = instName->staticInst->numSrcRegs(); // Access the credits attribute
 
     // Create a CheckerInst object with credits as the parameter
-    CheckerInst obj(credits);
+    CheckerInst checkerInst(credits,
+                            instName->staticInst);
 
     // Return the created CheckerInst object
-    return obj;
+    return checkerInst;
 }
 
 } // namespace gem5
