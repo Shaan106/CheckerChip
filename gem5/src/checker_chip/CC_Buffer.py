@@ -1,10 +1,12 @@
 from m5.params import *
 # from m5.SimObject import SimObject
 from m5.objects.ClockedObject import ClockedObject #<--------------
-<<<<<<< HEAD
-# from m5.objects import SrcClockDomain, VoltageDomain
-=======
->>>>>>> ed0c20ec39b666ec6dcf63a05dc063db132531a6
+from m5.objects import SrcClockDomain, VoltageDomain
+
+# cc_buffer_clock_domain = SrcClockDomain(
+#     clock="1GHz",  # Set the desired frequency
+#     voltage_domain=VoltageDomain()
+# )
 
 # class CC_Buffer(SimObject): # <----------- inherits from Clocked Object
 class CC_Buffer(ClockedObject):
@@ -12,20 +14,10 @@ class CC_Buffer(ClockedObject):
     cxx_header = "checker_chip/cc_buffer.hh"
     cxx_class = "gem5::CC_Buffer"
 
-<<<<<<< HEAD
-    # # Define a default voltage domain
-    # voltage_domain = VoltageDomain()
-
-    # # Define a default clock domain with a specific clock frequency
-    # clock_domain = SrcClockDomain(clock="2GHz", voltage_domain=voltage_domain)
+    # clk_domain = Param.ClockDomain(SrcClockDomain(clock="1GHz", voltage_domain=VoltageDomain()), "Clock domain")
 
     maxCredits = Param.Int(20, "Max Credits. How many items (credits) the buffer can hold")
-=======
-    maxCredits = Param.Int(20, "Max Credits. How many items (credits) the buffer can hold")
 
-
->>>>>>> ed0c20ec39b666ec6dcf63a05dc063db132531a6
-    
     '''
     extra notes
 
