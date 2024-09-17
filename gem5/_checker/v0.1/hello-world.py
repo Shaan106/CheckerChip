@@ -30,7 +30,6 @@ board = SimpleBoard(clk_freq="3GHz",
                     memory=memory,
                     cache_hierarchy=cache_hierarchy)
 
-
 # loading the binary for running hello-world
 binary = Resource("x86-hello64-static")
 #setting workload to current board (we are going to run in SE mode)

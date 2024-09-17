@@ -28,6 +28,15 @@ class CC_Buffer : public ClockedObject
     /// An event that wraps the above function
     EventFunctionWrapper event;
 
+    
+    /*
+      this is an event that will engage the buffer's clock to take the next cycle
+      bufferClockEngage() does the actual things, bufferClockEvent is the event
+    */
+    EventFunctionWrapper bufferClockEvent;
+
+    void processBufferClockEvent();
+
     /**
      * Fills the buffer for one iteration. If the buffer isn't full, this
      * function will enqueue another event to continue filling.
@@ -47,6 +56,9 @@ class CC_Buffer : public ClockedObject
 
     // current number of credits
     uint currentCredits;
+
+    // num instructions removed in current remove loop
+    uint creditsFreed;
 
   public:
     CC_Buffer(const CC_BufferParams &p);

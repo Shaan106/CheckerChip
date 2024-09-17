@@ -26,6 +26,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     ClockedObject(params),  // Change SimObject to ClockedObject
     // SimObject(params), 
     event([this]{ processEvent(); }, name() + ".event"),
+    bufferClockEvent([this]{ processBufferClockEvent(); }, name() + ".bufferClockEvent"),
     maxCredits(params.maxCredits)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
@@ -34,6 +35,19 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     buffer = std::deque<CheckerInst>();  // Initialize an empty deque for now
 
     currentCredits = maxCredits;
+
+    creditsFreed = 0;
+
+    schedule(bufferClockEvent, curTick() + 1000);
+}
+
+// Implement bufferClockEvent fire method
+void CC_Buffer::processBufferClockEvent()
+{
+    DPRINTF(CC_Buffer_Flag, "fire!!!! \n");
+
+    // Reschedule the event to occur again in 1000 ticks
+    schedule(bufferClockEvent, curTick() + 1000);
 }
 
 uint
@@ -52,17 +66,15 @@ CC_Buffer::processEvent()
 {
     // std::cout << "hi again..." << std::endl;
     DPRINTF(CC_Buffer_Flag, "Clearing buffer...\n");
-    // remove 4 elements from the front of the buffer
+    // remove 10 elements from the front of the buffer
     for (int i = 0; i < 10; i++) {
         buffer.pop_front();
     }
-    // increase num credits by 4
+    // increase num credits by 10
     currentCredits += 10;
-    // buffer.pop_front();  // Remove the oldest entry to keep the buffer size at 20
 }
 
 void
-// CC_Buffer::pushCommit(const StaticInstPtr &instName)
 CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 {
     // std::cout << "hi" << std::endl;
@@ -129,11 +141,15 @@ CheckerInst
 CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 {
     // Assuming instName->credits is an int
-    int credits = instName->staticInst->numSrcRegs(); // Access the credits attribute
+    unsigned long clockPeriodTicks = clockPeriod(); //clock period in ticks
 
     // Create a CheckerInst object with credits as the parameter
-    CheckerInst checkerInst(credits,
+    CheckerInst checkerInst(clockPeriodTicks,
+                            5, //timeUntilDecode
+                            10, // timeUnitlExecute
                             instName->staticInst);
+
+    DPRINTF(CC_Buffer_Flag, "the associated clk period is %d ticks\n", checkerInst.timeUntilExecute);
 
     // Return the created CheckerInst object
     return checkerInst;
