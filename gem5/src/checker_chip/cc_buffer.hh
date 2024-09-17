@@ -38,10 +38,9 @@ class CC_Buffer : public ClockedObject
     void processBufferClockEvent();
 
     /**
-     * Fills the buffer for one iteration. If the buffer isn't full, this
-     * function will enqueue another event to continue filling.
+     will attempt to empty the buffer if any instructions are timeUntilExecute < 0
      */
-    void linkedFunc();
+    void updateBufferContents();
 
     // Function that creates and returns a CheckerInst object
     CheckerInst instantiateObject(const gem5::o3::DynInstPtr &instName);
@@ -57,8 +56,11 @@ class CC_Buffer : public ClockedObject
     // current number of credits
     uint currentCredits;
 
-    // num instructions removed in current remove loop
-    uint creditsFreed;
+    // cc_buffer_clock tracks how many cc_buffer clock cycles have occured
+    unsigned long cc_buffer_clock;
+
+    // cc_buffer_clock_period is how many ticks per cc_buffer_clock cycle
+    unsigned long cc_buffer_clock_period;
 
   public:
     CC_Buffer(const CC_BufferParams &p);
