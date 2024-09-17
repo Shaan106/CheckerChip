@@ -35,7 +35,9 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     currentCredits = maxCredits; //max number of items checker can hold
 
     cc_buffer_clock = 0; //clock starts at 0
-    cc_buffer_clock_period = 300; // clock period (chip's period is 333 normally)
+    cc_buffer_clock_period = clockPeriod() + 5; // clock period (chip's period is 333 normally)
+
+    cc_buffer_bandwidth = 2; // for now max 2 numbers can be removed per cycle
 
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period); // start the async clock function
 } 
@@ -53,8 +55,7 @@ void CC_Buffer::processBufferClockEvent()
 
     // decrement timeUntil values on instructions
     for (auto &inst : buffer) {
-        inst.timeUntilDecode = inst.timeUntilDecode - 1;
-        inst.timeUntilExecute = inst.timeUntilExecute - 1;
+        inst.decrementTimers();
     }
 
     // update the buffer contents (remove any instructions that are < 0 timeUntilExecute)
@@ -63,7 +64,7 @@ void CC_Buffer::processBufferClockEvent()
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 
-    DPRINTF(CC_Buffer_Flag, "Buffer clock executed, current cc_buffer_clock: %lu <-------------\n", cc_buffer_clock);
+    // DPRINTF(CC_Buffer_Flag, "Buffer clock executed, current cc_buffer_clock: %lu <-------------\n", cc_buffer_clock);
 }
 
 
@@ -74,18 +75,27 @@ ie removes any instructions that can now be executed from buffer
 void 
 CC_Buffer::updateBufferContents()
 {
+    int currentItemsRemoved = 0;
+
     // Iterate over the buffer to find and remove expired instructions
     for (auto it = buffer.begin(); it != buffer.end(); )
     {
         if (it->timeUntilExecute <= 0) {
             // Print the instruction being removed
 
-            DPRINTF(CC_Buffer_Flag, "Removing instruction: %s", it->getStaticInst()->getName());
+            DPRINTF(CC_Buffer_Flag, "---------Removing instruction: %s---------\n", it->getStaticInst()->getName());
+            DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
+            DPRINTF(CC_Buffer_Flag, "New num credits: %d\n", currentCredits + 1);
 
             // Remove the instruction from the buffer
             it = buffer.erase(it);
 
             currentCredits++;
+            currentItemsRemoved++;
+            if (currentItemsRemoved >= cc_buffer_bandwidth) {
+                DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", cc_buffer_bandwidth);
+                return; //want to exit function here if more than cc_buffer_bandwidth number of items have been removed.
+            }
         } else {
             ++it;
         }
@@ -172,7 +182,6 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     // Output the buffer contents in one line
     DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent buffer contents:\n %s\n", currentCredits, bufferContents.c_str());
 }
-
 
 
 /*

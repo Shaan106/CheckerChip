@@ -62,6 +62,9 @@ class CC_Buffer : public ClockedObject
     // cc_buffer_clock_period is how many ticks per cc_buffer_clock cycle
     unsigned long cc_buffer_clock_period;
 
+    // cc_buffer_bandwidth is how many insts can be removed per cycle from buffer max
+    int cc_buffer_bandwidth;
+
   public:
     CC_Buffer(const CC_BufferParams &p);
     ~CC_Buffer(); /// Destructor
