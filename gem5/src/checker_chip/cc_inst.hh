@@ -27,9 +27,6 @@ public:
 
     // Getter for staticInst
     gem5::StaticInstPtr getStaticInst() const;
-
-    // reducing timers
-    void decrementTimers();
 };
 
 #endif // cc_inst_HH

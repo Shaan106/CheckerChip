@@ -37,6 +37,10 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     cc_buffer_clock = 0; //clock starts at 0
     cc_buffer_clock_period = clockPeriod() + 5; // clock period (chip's period is 333 normally)
 
+    // decode/execute latencies setting
+    num_cycles_to_decode = 5;
+    num_cycles_to_execute = 10;
+
     cc_buffer_bandwidth = 2; // for now max 2 numbers can be removed per cycle
 
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period); // start the async clock function
@@ -52,11 +56,6 @@ void CC_Buffer::processBufferClockEvent()
     
     //increase clock of cc_buffer by 1
     cc_buffer_clock = cc_buffer_clock + 1;
-
-    // decrement timeUntil values on instructions
-    for (auto &inst : buffer) {
-        inst.decrementTimers();
-    }
 
     // update the buffer contents (remove any instructions that are < 0 instExecuteCycle)
     updateBufferContents();
@@ -80,11 +79,12 @@ CC_Buffer::updateBufferContents()
     // Iterate over the buffer to find and remove expired instructions
     for (auto it = buffer.begin(); it != buffer.end(); )
     {
-        if (it->instExecuteCycle <= 0) {
+        if (it->instExecuteCycle <= cc_buffer_clock) {
             // Print the instruction being removed
 
             DPRINTF(CC_Buffer_Flag, "---------Removing instruction: %s---------\n", it->getStaticInst()->getName());
             DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
+            DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
             DPRINTF(CC_Buffer_Flag, "New num credits: %d\n", currentCredits + 1);
 
             // Remove the instruction from the buffer
@@ -193,9 +193,11 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 {
     unsigned long clockPeriodTicks = clockPeriod(); //clock period in ticks, random thing to try put in data struct
 
+    DPRINTF(CC_Buffer_Flag, "\nCurrent cycle: %d, \nCurrent cc_buffer_clock + num_cycles_to_execute: %d\n", cc_buffer_clock, cc_buffer_clock + num_cycles_to_execute);
+
     // Create a CheckerInst object with credits as the parameter
-    CheckerInst checkerInst(5, //instDecodeCycle = currentCycle + num_cycles_to_decode
-                            10, //instExecuteCycle
+    CheckerInst checkerInst(cc_buffer_clock + num_cycles_to_decode, //instDecodeCycle = currentCycle + num_cycles_to_decode (5)
+                            cc_buffer_clock + num_cycles_to_execute, //instExecuteCycle = currentCycle + num_cycles_to_execute (10)
                             instName->staticInst // staticInst passed in (contains info about the instruction)
                             );
 

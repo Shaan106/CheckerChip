@@ -16,10 +16,3 @@ CheckerInst::CheckerInst(int instDecodeCycle,
 gem5::StaticInstPtr CheckerInst::getStaticInst() const {
     return staticInst;
 }
-
-// decrement timers
-void CheckerInst::decrementTimers() {
-    instDecodeCycle = instDecodeCycle - 1;
-    
-    instExecuteCycle = instExecuteCycle - 1;
-}

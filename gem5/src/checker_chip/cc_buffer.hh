@@ -53,7 +53,9 @@ class CC_Buffer : public ClockedObject
     /// The maximum size of the buffer
     uint max_credits;
 
-    //
+    // lag times for decode and execute
+    uint num_cycles_to_decode;
+    uint num_cycles_to_execute;
 
     // current number of credits
     uint currentCredits;
