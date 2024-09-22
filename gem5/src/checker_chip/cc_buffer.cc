@@ -23,7 +23,6 @@ Constructor for the CC_buffer.
 */
 CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     ClockedObject(params), 
-    event([this]{ processEvent(); }, name() + ".event"),
     bufferClockEvent([this]{ processBufferClockEvent(); }, name() + ".bufferClockEvent"),
     max_credits(params.maxCredits) // params are from CC_Buffer.py
 {
@@ -31,7 +30,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     
     // this is now obsolete - just shows how we can pass in parameters from python
     // that's why this is still here.
-    currentCredits = max_credits; //max number of items checker can hold
+    // max_credits; //max number of items checker can hold set from python side
 
     //decode buffer setup
     decode_buffer = std::deque<CheckerInst>();
@@ -50,10 +49,6 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     //buffer clock setup
     cc_buffer_clock = 0; //clock cycle count, starts at 0
     cc_buffer_clock_period = clockPeriod() + 5; // clock period (chip's period is 333 normally)
-
-    // Initialize the buffer
-    buffer = std::deque<CheckerInst>();  // Initialize an empty deque for now
-    cc_buffer_bandwidth = 2; // for now max 2 numbers can be removed per cycle
 
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period); // start the async clock function
 } 
@@ -190,16 +185,6 @@ CC_Buffer::~CC_Buffer()
 
 
 /*
-processEvent is a legacy function, not needed post v2.2
-*/
-void
-CC_Buffer::processEvent()
-{
- //empty for now, redundant
-}
-
-
-/*
  pushCommit called from o3 commit to try push instruction onto buffer stack
 */
 void
@@ -239,7 +224,7 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     decode_buffer_contents += "]";
 
     // Output the buffer contents in one line
-    DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", currentCredits, decode_buffer_contents.c_str());
+    DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_current_credits, decode_buffer_contents.c_str());
 }
 
 

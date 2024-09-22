@@ -19,19 +19,10 @@ namespace gem5
 // class CC_Buffer : public SimObject // <--------- change to inherit from "ClockedObject"
 class CC_Buffer : public ClockedObject
 {
-  private:
-    /**
-     * Fill the buffer with the next chunk of data
-     */
-    void processEvent();
-
-    /// An event that wraps the above function
-    EventFunctionWrapper event;
-
-    
+  private:    
     /*
       this is an event that will engage the buffer's clock to take the next cycle
-      bufferClockEngage() does the actual things, bufferClockEvent is the event
+      processBufferClockEvent() does the actual things, bufferClockEvent is the event
     */
     EventFunctionWrapper bufferClockEvent;
 
@@ -48,12 +39,8 @@ class CC_Buffer : public ClockedObject
     // Function that creates and returns a CheckerInst object
     CheckerInst instantiateObject(const gem5::o3::DynInstPtr &instName);
 
-    /// A deque to hold the stack of strings (buffer)
-    // std::deque<std::string> buffer;
-    // std::deque<StaticInstPtr> buffer;
-    std::deque<CheckerInst> buffer;
-
     /// The maximum size of the buffer
+    /// obsolete now, here to demonstrate passing vals from Python side to c++
     uint max_credits;
 
     // decode buffer modelling parameters
@@ -70,17 +57,11 @@ class CC_Buffer : public ClockedObject
     uint execute_buffer_bandwidth;
     uint execute_buffer_latency; //all defns same as decode
 
-    // current number of credits
-    uint currentCredits;
-
     // cc_buffer_clock tracks how many cc_buffer clock cycles have occured
     unsigned long cc_buffer_clock;
 
     // cc_buffer_clock_period is how many ticks per cc_buffer_clock cycle
     unsigned long cc_buffer_clock_period;
-
-    // cc_buffer_bandwidth is how many insts can be removed per cycle from buffer max
-    int cc_buffer_bandwidth;
 
   public:
     CC_Buffer(const CC_BufferParams &p);

@@ -3,10 +3,6 @@ from m5.params import *
 from m5.objects.ClockedObject import ClockedObject #<--------------
 # from m5.objects import SrcClockDomain, VoltageDomain
 
-# cc_buffer_clock_domain = SrcClockDomain(
-#     clock="1GHz",  # Set the desired frequency
-#     voltage_domain=VoltageDomain()
-# )
 
 # class CC_Buffer(SimObject): # <----------- inherits from Clocked Object
 class CC_Buffer(ClockedObject):
