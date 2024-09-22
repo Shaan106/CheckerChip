@@ -85,6 +85,9 @@ void
 CC_Buffer::updateDecodeBufferContents()
 {
     int currentItemsRemoved = 0;
+    
+    // stall the buffer system?
+    int buffer_system_stall_flag = 0;
 
     // Iterate over the decode buffer to find and remove expired instructions
     for (auto it = decode_buffer.begin(); it != decode_buffer.end(); )
@@ -101,18 +104,30 @@ CC_Buffer::updateDecodeBufferContents()
             //TODO: push items here to the execute_buffer
             //TODO: make sure execute_buffer not full
             // Add the string to the buffer
-            execute_buffer.push_back(*it);
-            // reduce num decode credits
-            execute_buffer_current_credits--;
 
-            // Remove the instruction from the buffer
-            it = decode_buffer.erase(it);
+            if (execute_buffer_current_credits <= 0) {
+                //ASK: Stall the system?
+                buffer_system_stall_flag = 1;
+            } else {
+                
+                //execute buffer not full, so push inst.
+                execute_buffer.push_back(*it);
+                // reduce num decode credits
+                execute_buffer_current_credits--;
+                // Remove the instruction from the buffer
+                it = decode_buffer.erase(it);
+                // update credits available
+                decode_buffer_current_credits++;
+                currentItemsRemoved++;
+            }
 
-            decode_buffer_current_credits++;
-            currentItemsRemoved++;
+            
             if (currentItemsRemoved >= decode_buffer_bandwidth) {
                 DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", decode_buffer_bandwidth);
                 return; //want to exit function here if more than decode_buffer_bandwidth number of items have been removed.
+            } else if (buffer_system_stall_flag==1) {
+                DPRINTF(CC_Buffer_Flag, "Execute buffer reached max credits, no more insts removable\n");
+                return; //want to exit function here if execute buffer has no more credits available
             }
         } else {
             ++it;
