@@ -37,10 +37,13 @@ class CC_Buffer : public ClockedObject
 
     void processBufferClockEvent();
 
-    /**
-     will attempt to empty the buffer if any instructions at or beyond the instExecuteCycle
-     */
-    void updateBufferContents();
+    // decode_buffer update
+    // when decode ready push to execute_buffer
+    void updateDecodeBufferContents();
+
+    // execute_buffer update
+    // when execute ready, remove from pipe and "execute"
+    void updateExecuteBufferContents();
 
     // Function that creates and returns a CheckerInst object
     CheckerInst instantiateObject(const gem5::o3::DynInstPtr &instName);
@@ -53,9 +56,19 @@ class CC_Buffer : public ClockedObject
     /// The maximum size of the buffer
     uint max_credits;
 
-    // lag times for decode and execute
-    uint num_cycles_to_decode;
-    uint num_cycles_to_execute;
+    // decode buffer modelling parameters
+    std::deque<CheckerInst> decode_buffer; //actual buffer
+    uint decode_buffer_max_credits; // max insts buffer can hold
+    uint decode_buffer_current_credits; // current credits
+    uint decode_buffer_bandwidth; //decode bandwidth
+    uint decode_buffer_latency; // decode latency, replaces num_cycles_to_decode
+
+    // execute buffer modelling parameters
+    std::deque<CheckerInst> execute_buffer;
+    uint execute_buffer_max_credits;
+    uint execute_buffer_current_credits;
+    uint execute_buffer_bandwidth;
+    uint execute_buffer_latency; //all defns same as decode
 
     // current number of credits
     uint currentCredits;

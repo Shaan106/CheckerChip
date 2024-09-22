@@ -1155,7 +1155,7 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     }
 
     // TAG stall - this is where the stalling of the CPU happens
-    if (cc_buffer->getNumCredits() == 0) {
+    if (cc_buffer->getNumCredits() <= 0) {
       //DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
       //DPRINTF(CC_Buffer_Flag, "stall ");
       DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
