@@ -11,3 +11,4 @@ Source('cc_inst.cc')
 
 # debug flag specifically for our custom sim object
 DebugFlag('CC_Buffer_Flag') 
+

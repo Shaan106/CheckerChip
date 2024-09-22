@@ -4,19 +4,13 @@
 // #include "cpu/static_inst.hh"
 
 // Constructor
-CheckerInst::CheckerInst(unsigned long clockPeriodTicks, 
-                         int timeUntilDecode,
-                         int timeUntilExecute,
+CheckerInst::CheckerInst(int instDecodeCycle,
+                         int instExecuteCycle,
                         const gem5::StaticInstPtr &staticInst)
-    : clockPeriodTicks(clockPeriodTicks), 
-      timeUntilDecode(timeUntilDecode),
-      timeUntilExecute(timeUntilExecute),
+    : instDecodeCycle(instDecodeCycle),
+      instExecuteCycle(instExecuteCycle),
       staticInst(staticInst) {}
 
-// Getter for number
-unsigned long CheckerInst::getClockPeriodTicks() const {
-    return clockPeriodTicks;
-}
 
 // getting staticInst
 gem5::StaticInstPtr CheckerInst::getStaticInst() const {
@@ -25,7 +19,7 @@ gem5::StaticInstPtr CheckerInst::getStaticInst() const {
 
 // decrement timers
 void CheckerInst::decrementTimers() {
-    timeUntilDecode = timeUntilDecode - 1;
+    instDecodeCycle = instDecodeCycle - 1;
     
-    timeUntilExecute = timeUntilExecute - 1;
+    instExecuteCycle = instExecuteCycle - 1;
 }

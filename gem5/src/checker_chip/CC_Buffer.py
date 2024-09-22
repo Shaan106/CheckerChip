@@ -14,9 +14,9 @@ class CC_Buffer(ClockedObject):
     cxx_header = "checker_chip/cc_buffer.hh"
     cxx_class = "gem5::CC_Buffer"
 
-    # clk_domain = Param.ClockDomain(SrcClockDomain(clock="1GHz", voltage_domain=VoltageDomain()), "Clock domain")
-
     maxCredits = Param.Int(20, "Max Credits. How many items (credits) the buffer can hold")
+
+    # clk_domain = Param.ClockDomain(SrcClockDomain(clock="1GHz", voltage_domain=VoltageDomain()), "Clock domain")
 
     '''
     extra notes

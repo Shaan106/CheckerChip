@@ -38,7 +38,7 @@ class CC_Buffer : public ClockedObject
     void processBufferClockEvent();
 
     /**
-     will attempt to empty the buffer if any instructions are timeUntilExecute < 0
+     will attempt to empty the buffer if any instructions at or beyond the instExecuteCycle
      */
     void updateBufferContents();
 
@@ -51,7 +51,9 @@ class CC_Buffer : public ClockedObject
     std::deque<CheckerInst> buffer;
 
     /// The maximum size of the buffer
-    uint maxCredits;
+    uint max_credits;
+
+    //
 
     // current number of credits
     uint currentCredits;

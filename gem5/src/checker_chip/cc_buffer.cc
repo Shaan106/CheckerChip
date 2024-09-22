@@ -25,14 +25,14 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     ClockedObject(params), 
     event([this]{ processEvent(); }, name() + ".event"),
     bufferClockEvent([this]{ processBufferClockEvent(); }, name() + ".bufferClockEvent"),
-    maxCredits(params.maxCredits)
+    max_credits(params.maxCredits) // params are from CC_Buffer.py
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
     // Initialize the buffer
     buffer = std::deque<CheckerInst>();  // Initialize an empty deque for now
 
-    currentCredits = maxCredits; //max number of items checker can hold
+    currentCredits = max_credits; //max number of items checker can hold
 
     cc_buffer_clock = 0; //clock starts at 0
     cc_buffer_clock_period = clockPeriod() + 5; // clock period (chip's period is 333 normally)
@@ -58,7 +58,7 @@ void CC_Buffer::processBufferClockEvent()
         inst.decrementTimers();
     }
 
-    // update the buffer contents (remove any instructions that are < 0 timeUntilExecute)
+    // update the buffer contents (remove any instructions that are < 0 instExecuteCycle)
     updateBufferContents();
 
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
@@ -80,7 +80,7 @@ CC_Buffer::updateBufferContents()
     // Iterate over the buffer to find and remove expired instructions
     for (auto it = buffer.begin(); it != buffer.end(); )
     {
-        if (it->timeUntilExecute <= 0) {
+        if (it->instExecuteCycle <= 0) {
             // Print the instruction being removed
 
             DPRINTF(CC_Buffer_Flag, "---------Removing instruction: %s---------\n", it->getStaticInst()->getName());
@@ -165,7 +165,7 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     currentCredits--;
 
     // Ensure the buffer size does not exceed 20
-    if (buffer.size() >= maxCredits) {
+    if (buffer.size() >= max_credits) {
         DPRINTF(CC_Buffer_Flag, "Max credits reached, cannot add more items, CPU stalled.\n");
     }
 
@@ -194,10 +194,10 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
     unsigned long clockPeriodTicks = clockPeriod(); //clock period in ticks, random thing to try put in data struct
 
     // Create a CheckerInst object with credits as the parameter
-    CheckerInst checkerInst(clockPeriodTicks,
-                            5, //timeUntilDecode
-                            10, // timeUnitlExecute
-                            instName->staticInst);
+    CheckerInst checkerInst(5, //instDecodeCycle = currentCycle + num_cycles_to_decode
+                            10, //instExecuteCycle
+                            instName->staticInst // staticInst passed in (contains info about the instruction)
+                            );
 
     // Return the created CheckerInst object
     return checkerInst;

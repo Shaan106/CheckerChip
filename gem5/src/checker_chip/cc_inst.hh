@@ -10,24 +10,20 @@
 class CheckerInst {
 private:
     // Private member variables
-    unsigned long clockPeriodTicks;
+    // unsigned long clockPeriodTicks;
 
     gem5::StaticInstPtr staticInst;
 
 public:
 
-    // time counters to see when the instructions can be executed.
-    int timeUntilDecode;
-    int timeUntilExecute;
+    // cycle counters to see when the instructions can be executed.
+    int instDecodeCycle;
+    int instExecuteCycle;
 
     // Constructor
-    CheckerInst(unsigned long clockPeriodTicks, 
-                int timeUntilDecode,
-                int timeUntilExecute,
+    CheckerInst(int instDecodeCycle,
+                int instExecuteCycle,
                 const gem5::StaticInstPtr &staticInst);
-
-    // Getter for number
-    unsigned long getClockPeriodTicks() const;
 
     // Getter for staticInst
     gem5::StaticInstPtr getStaticInst() const;
