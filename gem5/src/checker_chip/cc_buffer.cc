@@ -135,12 +135,10 @@ CC_Buffer::updateDecodeBufferContents()
     }
 }
 
-
+ 
 void 
 CC_Buffer::updateExecuteBufferContents()
 {
-    // int currentItemsRemoved = 0;
-
     // Iterate over the execute buffer to find and remove expired instructions
     for (auto it = execute_buffer.begin(); it != execute_buffer.end(); )
     {
@@ -160,12 +158,7 @@ CC_Buffer::updateExecuteBufferContents()
             it = execute_buffer.erase(it);
 
             execute_buffer_current_credits++;
-            // currentItemsRemoved++;
             num_functional_units_free++;
-            // if (currentItemsRemoved >= execute_buffer_bandwidth) {
-            //     DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", execute_buffer_bandwidth);
-            //     return; //want to exit function here if more than execute_buffer_bandwidth number of items have been removed.
-            // }
 
         } else { // case 2: inst has not been sent to the FUs yet and has not started executing
             if (num_functional_units_free > 0) {
