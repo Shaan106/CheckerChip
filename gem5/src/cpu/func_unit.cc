@@ -32,6 +32,8 @@
 
 #include "base/logging.hh"
 
+// #include <iostream> // for debugging
+
 namespace gem5
 {
 
@@ -94,6 +96,15 @@ bool
 FuncUnit::isPipelined(OpClass capability)
 {
     return pipelined[capability];
+}
+
+// TAG getting a latency for the corresponding operation
+int FuncUnit::getLatencyForOp(OpClass op_class) const {
+    // Assuming op_class is the index corresponding to the operation in the opLatencies array
+    for (int i = 0; i < opLatencies.size(); ++i) {
+        // std::cout << "Latency for operation " << i << " is " << opLatencies[i] << std::endl;
+    }
+    return opLatencies[op_class];
 }
 
 } // namespace gem5

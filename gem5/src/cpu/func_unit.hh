@@ -119,6 +119,9 @@ class FuncUnit
 
     unsigned &opLatency(OpClass capability);
     bool isPipelined(OpClass capability);
+
+    // TAG Method to get the latency for a specific operation
+    int getLatencyForOp(OpClass op_class) const;
 };
 
 } // namespace gem5

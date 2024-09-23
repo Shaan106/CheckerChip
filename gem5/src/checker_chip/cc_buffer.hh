@@ -12,6 +12,8 @@
 #include "cpu/o3/dyn_inst_ptr.hh"
 #include "checker_chip/cc_inst.hh"
 
+#include "cpu/func_unit.hh" // this is for the func unit and doing the opClass -> latency conversion
+
 
 namespace gem5
 {
@@ -63,6 +65,10 @@ class CC_Buffer : public ClockedObject
     // cc_buffer_clock_period is how many ticks per cc_buffer_clock cycle
     unsigned long cc_buffer_clock_period;
 
+    // instance of a functional unit
+    FuncUnit funcUnit;
+    void initializeFuncUnit(FuncUnit &funcUnit); // this is to set the initial "capabilities"
+
   public:
     CC_Buffer(const CC_BufferParams &p);
     ~CC_Buffer(); /// Destructor
@@ -81,6 +87,9 @@ class CC_Buffer : public ClockedObject
      * Returns the number of credits in the buffer.
     */
     uint getNumCredits();
+
+    // Function to get latency for an operation
+    int getOperationLatency(OpClass op_class);
     
 };
 

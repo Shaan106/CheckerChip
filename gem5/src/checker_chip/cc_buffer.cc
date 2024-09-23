@@ -50,6 +50,9 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
     cc_buffer_clock = 0; //clock cycle count, starts at 0
     cc_buffer_clock_period = clockPeriod() + 5; // clock period (chip's period is 333 normally)
 
+    //functional units setup
+    initializeFuncUnit(funcUnit);
+
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period); // start the async clock function
 } 
 
@@ -195,13 +198,16 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     CheckerInst checkerInst = instantiateObject(instName);
 
     // random clock and other debug statements
-    DPRINTF(CC_Buffer_Flag, "Current tick: %lu\n", curTick()); // Print the current simulation tick
-    Tick period = clockPeriod(); // Get and print the clock period in ticks
-    DPRINTF(CC_Buffer_Flag, "Clock period: %lu ticks\n", period);
+    // DPRINTF(CC_Buffer_Flag, "Current tick: %lu\n", curTick()); // Print the current simulation tick
+    // Tick period = clockPeriod(); // Get and print the clock period in ticks
+    // // DPRINTF(CC_Buffer_Flag, "Clock period: %lu ticks\n", period);
     Cycles currentCycle = Cycles(clockEdge() / clockPeriod());     // Compute and print the current clock cycle
-    DPRINTF(CC_Buffer_Flag, "Current clock cycle: %lu\n", currentCycle);
+    DPRINTF(CC_Buffer_Flag, "Current CPU clock cycle: %lu\n", currentCycle);
     DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
 
+    // test for functional unit
+    int inst_latency = getOperationLatency(checkerInst.getStaticInst()->opClass());
+    DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d --------- !!!!!!!!!\n", inst_latency);
 
     // Add the string to the buffer
     decode_buffer.push_back(checkerInst);
@@ -247,6 +253,31 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 
     // Return the created CheckerInst object
     return checkerInst;
+}
+
+/*
+getOperationLatency gets the operation latency from a given operation and returns it.
+*/
+int CC_Buffer::getOperationLatency(OpClass op_class) {
+    return funcUnit.getLatencyForOp(op_class);
+}
+
+/*
+initializeFuncUnit initializes the functional unit and gives each inst some latency
+*/
+void CC_Buffer::initializeFuncUnit(FuncUnit &funcUnit) {
+    unsigned constant_latency = 5;
+
+    // Add capabilities for all the OpClasses defined in op_class.hh
+    funcUnit.addCapability(IntAluOp, constant_latency, false);
+    funcUnit.addCapability(IntMultOp, constant_latency, false);
+    funcUnit.addCapability(FloatAddOp, constant_latency, false);
+    funcUnit.addCapability(SimdAddOp, constant_latency, false);
+
+    // Continue adding other capabilities...
+    funcUnit.addCapability(SimdMultOp, constant_latency, false);
+    funcUnit.addCapability(FloatDivOp, constant_latency, false);
+    funcUnit.addCapability(SimdDivOp, constant_latency, false);
 }
 
 } // namespace gem5
