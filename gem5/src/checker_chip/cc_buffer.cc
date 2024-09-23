@@ -52,6 +52,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
 
     //functional units setup
     initializeFuncUnit(funcUnit);
+    num_functional_units = 2;
+    num_functional_units_free = num_functional_units;
 
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period); // start the async clock function
 } 
@@ -106,8 +108,8 @@ CC_Buffer::updateDecodeBufferContents()
             if (execute_buffer_current_credits <= 0) {
                 //ASK: Stall the system?
                 buffer_system_stall_flag = 1;
+
             } else {
-                
                 //execute buffer not full, so push inst.
                 execute_buffer.push_back(*it);
                 // reduce num decode credits
@@ -137,16 +139,19 @@ CC_Buffer::updateDecodeBufferContents()
 void 
 CC_Buffer::updateExecuteBufferContents()
 {
-    int currentItemsRemoved = 0;
+    // int currentItemsRemoved = 0;
 
     // Iterate over the execute buffer to find and remove expired instructions
     for (auto it = execute_buffer.begin(); it != execute_buffer.end(); )
     {
-        if (it->instExecuteCycle <= cc_buffer_clock) {
+        // case 1: the instruction has been executed by the functional units.
+        // therefore, if execute cycle reached and inst is in fu then do this part
+        if (it->instExecuteCycle <= cc_buffer_clock && it->instInFU == true) {
             // Print the instruction being moved to execute
 
             DPRINTF(CC_Buffer_Flag, "---------Executing instruction: %s---------\n", it->getStaticInst()->getName());
             DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
+            DPRINTF(CC_Buffer_Flag, "New FUs free: %lu\n", num_functional_units_free + 1);
             DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
             DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits);
             DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits + 1);
@@ -155,13 +160,29 @@ CC_Buffer::updateExecuteBufferContents()
             it = execute_buffer.erase(it);
 
             execute_buffer_current_credits++;
-            currentItemsRemoved++;
-            if (currentItemsRemoved >= execute_buffer_bandwidth) {
-                DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", execute_buffer_bandwidth);
-                return; //want to exit function here if more than execute_buffer_bandwidth number of items have been removed.
+            // currentItemsRemoved++;
+            num_functional_units_free++;
+            // if (currentItemsRemoved >= execute_buffer_bandwidth) {
+            //     DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", execute_buffer_bandwidth);
+            //     return; //want to exit function here if more than execute_buffer_bandwidth number of items have been removed.
+            // }
+
+        } else { // case 2: inst has not been sent to the FUs yet and has not started executing
+            if (num_functional_units_free > 0) {
+                //inst is now in fu
+                it->instInFU = true;
+                //inst execution cycle is current clock + operation's latency
+                it->instExecuteCycle = cc_buffer_clock + getOperationLatency(it->getStaticInst()->opClass());
+                //reduce number of FUs currently free
+                num_functional_units_free--;
+                //go to next item in buffer since more FUs are free
+                ++it;
+            } else {
+                // if no FUs free then stop.
+                DPRINTF(CC_Buffer_Flag, "All %d functional units full, cannot send inst to any more functional units\n", num_functional_units);
+                return;
             }
-        } else {
-            ++it;
+            
         }
     }
 }
@@ -249,7 +270,8 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 
     // Create a CheckerInst object with credits as the parameter
     CheckerInst checkerInst(cc_buffer_clock + decode_buffer_latency, //instDecodeCycle = currentCycle + decode_buffer_latency (5)
-                            cc_buffer_clock + inst_execute_latency, //instExecuteCycle = currentCycle + inst execute latency
+                            0, //instExecuteCycle = cc_buffer_clock + inst_execute_latency
+                            false, // instInFU
                             instName->staticInst // staticInst passed in (contains info about the instruction)
                             );
 

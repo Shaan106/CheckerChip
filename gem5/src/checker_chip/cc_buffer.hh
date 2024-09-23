@@ -67,6 +67,8 @@ class CC_Buffer : public ClockedObject
 
     // instance of a functional unit
     FuncUnit funcUnit;
+    uint num_functional_units;
+    uint num_functional_units_free;
     void initializeFuncUnit(FuncUnit &funcUnit); // this is to set the initial "capabilities"
 
   public:

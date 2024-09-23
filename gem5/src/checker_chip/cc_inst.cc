@@ -6,9 +6,11 @@
 // Constructor
 CheckerInst::CheckerInst(int instDecodeCycle,
                          int instExecuteCycle,
+                         bool instInFU,
                         const gem5::StaticInstPtr &staticInst)
     : instDecodeCycle(instDecodeCycle),
       instExecuteCycle(instExecuteCycle),
+      instInFU(instInFU),
       staticInst(staticInst) {}
 
 

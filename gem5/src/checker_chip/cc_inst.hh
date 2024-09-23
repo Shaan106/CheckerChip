@@ -20,9 +20,13 @@ public:
     int instDecodeCycle;
     int instExecuteCycle;
 
+    //bool to check whether inst has been assigned a functional unit
+    bool instInFU;
+
     // Constructor
     CheckerInst(int instDecodeCycle,
                 int instExecuteCycle,
+                bool instInFU,
                 const gem5::StaticInstPtr &staticInst);
 
     // Getter for staticInst
