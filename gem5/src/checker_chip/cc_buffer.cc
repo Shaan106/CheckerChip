@@ -207,7 +207,8 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 
     // test for functional unit
     int inst_latency = getOperationLatency(checkerInst.getStaticInst()->opClass());
-    DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d --------- !!!!!!!!!\n", inst_latency);
+    DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %d --------- !!!!!!!!!\n", inst_latency, checkerInst.instExecuteCycle);
+    // DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d --------- !!!!!!!!!\n", inst_latency);
 
     // Add the string to the buffer
     decode_buffer.push_back(checkerInst);
@@ -242,12 +243,13 @@ CheckerInst
 CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 {
     unsigned long clockPeriodTicks = clockPeriod(); //clock period in ticks, random thing to try put in data struct
-
-    DPRINTF(CC_Buffer_Flag, "\nCurrent cycle: %d, \nCurrent cc_buffer_clock + execute_buffer_latency: %d\n", cc_buffer_clock, cc_buffer_clock + execute_buffer_latency);
+    int inst_execute_latency = getOperationLatency(instName->staticInst->opClass());
+    DPRINTF(CC_Buffer_Flag, "\nCurrent cycle: %d, \nCurrent cc_buffer_clock + inst_execute_latency: %d\n", cc_buffer_clock, cc_buffer_clock + inst_execute_latency);
+    // DPRINTF(CC_Buffer_Flag, "\nCurrent cycle: %d, \nCurrent cc_buffer_clock + inst_execute_latency: %d\n", cc_buffer_clock, cc_buffer_clock + execute_buffer_latency);
 
     // Create a CheckerInst object with credits as the parameter
     CheckerInst checkerInst(cc_buffer_clock + decode_buffer_latency, //instDecodeCycle = currentCycle + decode_buffer_latency (5)
-                            cc_buffer_clock + execute_buffer_latency, //instExecuteCycle = currentCycle + execute_buffer_latency (10)
+                            cc_buffer_clock + inst_execute_latency, //instExecuteCycle = currentCycle + inst execute latency
                             instName->staticInst // staticInst passed in (contains info about the instruction)
                             );
 
@@ -259,7 +261,13 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 getOperationLatency gets the operation latency from a given operation and returns it.
 */
 int CC_Buffer::getOperationLatency(OpClass op_class) {
-    return funcUnit.getLatencyForOp(op_class);
+    int returnLatency = funcUnit.getLatencyForOp(op_class);
+
+    if (returnLatency == 0) {
+        return 4; // default val, not having 0 latency
+    }
+
+    return returnLatency;
 }
 
 /*
@@ -269,15 +277,91 @@ void CC_Buffer::initializeFuncUnit(FuncUnit &funcUnit) {
     unsigned constant_latency = 5;
 
     // Add capabilities for all the OpClasses defined in op_class.hh
+    // The names like IntAluOp are from op_class.hh which is within func_unit.hh
+
+    // this is awful i don't like how this is done but idk how else for now.
+
+    //int
     funcUnit.addCapability(IntAluOp, constant_latency, false);
     funcUnit.addCapability(IntMultOp, constant_latency, false);
-    funcUnit.addCapability(FloatAddOp, constant_latency, false);
-    funcUnit.addCapability(SimdAddOp, constant_latency, false);
+    funcUnit.addCapability(IntDivOp, constant_latency, false);
 
-    // Continue adding other capabilities...
-    funcUnit.addCapability(SimdMultOp, constant_latency, false);
+    //float
+    funcUnit.addCapability(FloatAddOp, constant_latency, false);
+    funcUnit.addCapability(FloatCmpOp, constant_latency, false);
+    funcUnit.addCapability(FloatCvtOp, constant_latency, false);
+    funcUnit.addCapability(FloatMultOp, constant_latency, false);
+    funcUnit.addCapability(FloatMultAccOp, constant_latency, false);
     funcUnit.addCapability(FloatDivOp, constant_latency, false);
-    funcUnit.addCapability(SimdDivOp, constant_latency, false);
-}
+    funcUnit.addCapability(FloatMiscOp, constant_latency, false);
+    funcUnit.addCapability(FloatSqrtOp, constant_latency, false);
+
+    // funcUnit.addCapability(SimdAddOp, constant_latency, false);
+    // funcUnit.addCapability(SimdAddAccOp, constant_latency, false);
+    // funcUnit.addCapability(SimdAluOp, constant_latency, false);
+    // funcUnit.addCapability(SimdCmpOp, constant_latency, false);
+    // funcUnit.addCapability(SimdCvtOp, constant_latency, false);
+    // funcUnit.addCapability(SimdMiscOp, constant_latency, false);
+    // funcUnit.addCapability(SimdMultOp, constant_latency, false);
+    // funcUnit.addCapability(SimdMultAccOp, constant_latency, false);
+    // funcUnit.addCapability(SimdMatMultAccOp, constant_latency, false);
+    // funcUnit.addCapability(SimdShiftOp, constant_latency, false);
+    // funcUnit.addCapability(SimdShiftAccOp, constant_latency, false);
+    // funcUnit.addCapability(SimdDivOp, constant_latency, false);
+    // funcUnit.addCapability(SimdSqrtOp, constant_latency, false);
+    // funcUnit.addCapability(SimdReduceAddOp, constant_latency, false);
+    // funcUnit.addCapability(SimdReduceAluOp, constant_latency, false);
+    // funcUnit.addCapability(SimdReduceCmpOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatAddOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatAluOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatCmpOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatCvtOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatDivOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatMiscOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatMultOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatMultAccOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatMatMultAccOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatSqrtOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatReduceCmpOp, constant_latency, false);
+    // funcUnit.addCapability(SimdFloatReduceAddOp, constant_latency, false);
+    // funcUnit.addCapability(SimdAesOp, constant_latency, false);
+    // funcUnit.addCapability(SimdAesMixOp, constant_latency, false);
+    // funcUnit.addCapability(SimdSha1HashOp, constant_latency, false);
+    // funcUnit.addCapability(SimdSha1Hash2Op, constant_latency, false);
+    // funcUnit.addCapability(SimdSha256HashOp, constant_latency, false);
+    // funcUnit.addCapability(SimdSha256Hash2Op, constant_latency, false);
+    // funcUnit.addCapability(SimdShaSigma2Op, constant_latency, false);
+    // funcUnit.addCapability(SimdShaSigma3Op, constant_latency, false);
+    // funcUnit.addCapability(SimdPredAluOp, constant_latency, false);
+    // funcUnit.addCapability(MatrixOp, constant_latency, false);
+    // funcUnit.addCapability(MatrixMovOp, constant_latency, false);
+    // funcUnit.addCapability(MatrixOPOp, constant_latency, false);
+    // funcUnit.addCapability(MemReadOp, constant_latency, false);
+    // funcUnit.addCapability(MemWriteOp, constant_latency, false);
+    // funcUnit.addCapability(FloatMemReadOp, constant_latency, false);
+    // funcUnit.addCapability(FloatMemWriteOp, constant_latency, false);
+    // funcUnit.addCapability(IprAccessOp, constant_latency, false);
+    // funcUnit.addCapability(InstPrefetchOp, constant_latency, false);
+    // funcUnit.addCapability(VectorUnitStrideLoadOp, constant_latency, false);
+    // funcUnit.addCapability(VectorUnitStrideStoreOp, constant_latency, false);
+    // funcUnit.addCapability(VectorUnitStrideMaskLoadOp, constant_latency, false);
+    // funcUnit.addCapability(VectorUnitStrideMaskStoreOp, constant_latency, false);
+    // funcUnit.addCapability(VectorStridedLoadOp, constant_latency, false);
+    // funcUnit.addCapability(VectorStridedStoreOp, constant_latency, false);
+    // funcUnit.addCapability(VectorIndexedLoadOp, constant_latency, false);
+    // funcUnit.addCapability(VectorIndexedStoreOp, constant_latency, false);
+    // funcUnit.addCapability(VectorUnitStrideFaultOnlyFirstLoadOp, constant_latency, false);
+    // funcUnit.addCapability(VectorWholeRegisterLoadOp, constant_latency, false);
+    // funcUnit.addCapability(VectorWholeRegisterStoreOp, constant_latency, false);
+    // funcUnit.addCapability(VectorIntegerArithOp, constant_latency, false);
+    // funcUnit.addCapability(VectorFloatArithOp, constant_latency, false);
+    // funcUnit.addCapability(VectorFloatConvertOp, constant_latency, false);
+    // funcUnit.addCapability(VectorIntegerReduceOp, constant_latency, false);
+    // funcUnit.addCapability(VectorFloatReduceOp, constant_latency, false);
+    // funcUnit.addCapability(VectorMiscOp, constant_latency, false);
+    // funcUnit.addCapability(VectorIntegerExtensionOp, constant_latency, false);
+    // funcUnit.addCapability(VectorConfigOp, constant_latency, false);
+    // funcUnit.addCapability(Num_OpClasses, constant_latency, false);
+    }
 
 } // namespace gem5
