@@ -14,6 +14,7 @@
 #include <deque> 
 
 #include "cc_inst.hh" // for including new instruction class defn.
+// #include "cc_creditSystem.hh"
 
 
 namespace gem5
@@ -21,42 +22,46 @@ namespace gem5
 /*
 Constructor for the CC_buffer. 
 */
-CC_Buffer::CC_Buffer(const CC_BufferParams &params) :
-    ClockedObject(params), 
-    bufferClockEvent([this]{ processBufferClockEvent(); }, name() + ".bufferClockEvent"),
-    max_credits(params.maxCredits) // params are from CC_Buffer.py
+CC_Buffer::CC_Buffer(const CC_BufferParams &params)
+    : ClockedObject(params), // Initialize base class ClockedObject with params
+      bufferClockEvent([this] { processBufferClockEvent(); }, name() + ".bufferClockEvent"), // Initialize bufferClockEvent with the provided lambda function
+      max_credits(params.maxCredits), // Initialize max_credits using the value from params
+
+      decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
+      decode_buffer_max_credits(20), // Set decode_buffer_max_credits to 20
+      decode_buffer_current_credits(20), // Set decode_buffer_current_credits to 20 (starting full)
+      decode_buffer_bandwidth(2), // Set decode_buffer_bandwidth to 2
+      decode_buffer_latency(5), // Set decode_buffer_latency to 5
+
+      decode_buffer_credits(
+                        &cc_buffer_clock,
+                        20, //max_credits = 20
+                        1, //unsigned long default_latency_add = 0
+                        0 //unsigned long default_latency_remove = 0
+                        ), // Initialize decode_buffer_credits using   
+
+      execute_buffer(std::deque<CheckerInst>()), // Initialize execute_buffer as an empty deque explicitly
+      execute_buffer_max_credits(20), // Set execute_buffer_max_credits to 20
+      execute_buffer_current_credits(20), // Set execute_buffer_current_credits to 20 (starting full)
+      execute_buffer_bandwidth(2), // Set execute_buffer_bandwidth to 2
+      execute_buffer_latency(5), // Set execute_buffer_latency to 5
+
+      cc_buffer_clock(0), // Initialize cc_buffer_clock to 0
+      cc_buffer_clock_period(clockPeriod() + 5), // Set cc_buffer_clock_period using clockPeriod() + 5
+
+      funcUnit(FuncUnit()), // Explicitly call default constructor of FuncUnit, initializing funcUnit
+      num_functional_units(2), // Set num_functional_units to 2
+      num_functional_units_free(2) // Set num_functional_units_free to 2 (initial state, all units are free)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
-    
-    // this is now obsolete - just shows how we can pass in parameters from python
-    // that's why this is still here.
-    // max_credits; //max number of items checker can hold set from python side
 
-    //decode buffer setup
-    decode_buffer = std::deque<CheckerInst>();
-    decode_buffer_max_credits = 20;
-    decode_buffer_current_credits = decode_buffer_max_credits;
-    decode_buffer_bandwidth = 2;
-    decode_buffer_latency = 5;
-
-    //execute buffer setup
-    execute_buffer = std::deque<CheckerInst>();
-    execute_buffer_max_credits = 20;
-    execute_buffer_current_credits = execute_buffer_max_credits;
-    execute_buffer_bandwidth = 2;
-    execute_buffer_latency = 5;
-
-    //buffer clock setup
-    cc_buffer_clock = 0; //clock cycle count, starts at 0
-    cc_buffer_clock_period = clockPeriod() + 5; // clock period (chip's period is 333 normally)
-
-    //functional units setup
+    // Functional units setup (if there's more to set up than basic initialization)
     initializeFuncUnit(funcUnit);
-    num_functional_units = 2;
-    num_functional_units_free = num_functional_units;
 
-    schedule(bufferClockEvent, curTick() + cc_buffer_clock_period); // start the async clock function
-} 
+    // Schedule the buffer clock event to trigger after the initial period
+    schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
+}
+
 
 /*
 processBufferClockEvent is a function that gets called every cc_buffer_clock_period ticks
@@ -75,6 +80,11 @@ void CC_Buffer::processBufferClockEvent()
 
     // update execute buffer contents
     updateExecuteBufferContents();
+
+    // test with new system
+    decode_buffer_credits.updateCredits();
+
+    // DPRINTF(CC_Buffer_Flag, "----------> Num decode credits: %d, NEW Num decode credits: %d \n", decode_buffer_current_credits, decode_buffer_credits.getCredits());
 
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
@@ -98,7 +108,8 @@ CC_Buffer::updateDecodeBufferContents()
             DPRINTF(CC_Buffer_Flag, "---------Decoding instruction: %s---------\n", it->getStaticInst()->getName());
             DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
             DPRINTF(CC_Buffer_Flag, "Inst instDecodeCycle: %d\n", it->instDecodeCycle);
-            DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits + 1);
+            // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits + 1);
+            DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits() + 1);
             DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits - 1);
 
             //TODO: push items here to the execute_buffer
@@ -117,7 +128,8 @@ CC_Buffer::updateDecodeBufferContents()
                 // Remove the instruction from the buffer
                 it = decode_buffer.erase(it);
                 // update credits available
-                decode_buffer_current_credits++;
+                // decode_buffer_current_credits++;
+                decode_buffer_credits.addCredit();
                 currentItemsRemoved++;
             }
 
@@ -151,7 +163,8 @@ CC_Buffer::updateExecuteBufferContents()
             DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
             DPRINTF(CC_Buffer_Flag, "New FUs free: %lu\n", num_functional_units_free + 1);
             DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
-            DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits);
+            // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits);
+            DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits());
             DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits + 1);
 
             // Remove the instruction from the buffer
@@ -188,7 +201,9 @@ uint
 CC_Buffer::getNumCredits()
 {
     // TODO: need to change this to decode_buffer_current_credits available
-    return decode_buffer_current_credits;
+    // return decode_buffer_current_credits;
+    return decode_buffer_credits.getCredits();
+
 }
 
 
@@ -222,12 +237,13 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     // test for functional unit
     int inst_latency = getOperationLatency(checkerInst.getStaticInst()->opClass());
     DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %d --------- !!!!!!!!!\n", inst_latency, checkerInst.instExecuteCycle);
-    // DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d --------- !!!!!!!!!\n", inst_latency);
+    
 
     // Add the string to the buffer
     decode_buffer.push_back(checkerInst);
     // reduce num decode credits
-    decode_buffer_current_credits--;
+    // decode_buffer_current_credits--;
+    decode_buffer_credits.decrementCredit();
 
     // Ensure the buffer size does not exceed max_credits
     if (decode_buffer.size() >= decode_buffer_max_credits) {
@@ -245,7 +261,8 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     decode_buffer_contents += "]";
 
     // Output the buffer contents in one line
-    DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_current_credits, decode_buffer_contents.c_str());
+    // DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_current_credits, decode_buffer_contents.c_str());
+    DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_credits.getCredits(), decode_buffer_contents.c_str());
 }
 
 
@@ -348,11 +365,13 @@ void CC_Buffer::initializeFuncUnit(FuncUnit &funcUnit) {
     // funcUnit.addCapability(SimdShaSigma2Op, constant_latency, false);
     // funcUnit.addCapability(SimdShaSigma3Op, constant_latency, false);
     // funcUnit.addCapability(SimdPredAluOp, constant_latency, false);
+
     // funcUnit.addCapability(MatrixOp, constant_latency, false);
     // funcUnit.addCapability(MatrixMovOp, constant_latency, false);
     // funcUnit.addCapability(MatrixOPOp, constant_latency, false);
     // funcUnit.addCapability(MemReadOp, constant_latency, false);
     // funcUnit.addCapability(MemWriteOp, constant_latency, false);
+
     // funcUnit.addCapability(FloatMemReadOp, constant_latency, false);
     // funcUnit.addCapability(FloatMemWriteOp, constant_latency, false);
     // funcUnit.addCapability(IprAccessOp, constant_latency, false);
@@ -376,7 +395,7 @@ void CC_Buffer::initializeFuncUnit(FuncUnit &funcUnit) {
     // funcUnit.addCapability(VectorMiscOp, constant_latency, false);
     // funcUnit.addCapability(VectorIntegerExtensionOp, constant_latency, false);
     // funcUnit.addCapability(VectorConfigOp, constant_latency, false);
-    // funcUnit.addCapability(Num_OpClasses, constant_latency, false);
+    // funcUnit.addCapability(Num_OpClasses, constant_latency, false); this is not an instruction this is a placeholder
     }
 
 } // namespace gem5

@@ -14,6 +14,7 @@
 
 #include "cpu/func_unit.hh" // this is for the func unit and doing the opClass -> latency conversion
 
+#include "checker_chip/cc_creditSystem.hh" // this is for the new credit latency system
 
 namespace gem5
 {
@@ -58,6 +59,10 @@ class CC_Buffer : public ClockedObject
     uint execute_buffer_current_credits;
     uint execute_buffer_bandwidth;
     uint execute_buffer_latency; //all defns same as decode
+
+    // new credit system
+    CheckerCreditSystem decode_buffer_credits; // Declare without parameters
+    // CheckerCreditSystem execute_buffer_credits; // Declare without parameters
 
     // cc_buffer_clock tracks how many cc_buffer clock cycles have occured
     unsigned long cc_buffer_clock;
