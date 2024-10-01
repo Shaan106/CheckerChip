@@ -28,8 +28,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       max_credits(params.maxCredits), // Initialize max_credits using the value from params
 
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
-      decode_buffer_max_credits(20), // Set decode_buffer_max_credits to 20
-      decode_buffer_current_credits(20), // Set decode_buffer_current_credits to 20 (starting full)
+    //   decode_buffer_max_credits(20), // Set decode_buffer_max_credits to 20
+    //   decode_buffer_current_credits(20), // Set decode_buffer_current_credits to 20 (starting full)
       decode_buffer_bandwidth(2), // Set decode_buffer_bandwidth to 2
       decode_buffer_latency(5), // Set decode_buffer_latency to 5
 
@@ -40,11 +40,18 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
 
+      execute_buffer_credits(
+                        &cc_buffer_clock,
+                        20, //max_credits = 20
+                        1, //unsigned long default_latency_add = 0
+                        0 //unsigned long default_latency_remove = 0
+                        ), // Initialize decode_buffer_credits using   
+
       execute_buffer(std::deque<CheckerInst>()), // Initialize execute_buffer as an empty deque explicitly
-      execute_buffer_max_credits(20), // Set execute_buffer_max_credits to 20
-      execute_buffer_current_credits(20), // Set execute_buffer_current_credits to 20 (starting full)
-      execute_buffer_bandwidth(2), // Set execute_buffer_bandwidth to 2
-      execute_buffer_latency(5), // Set execute_buffer_latency to 5
+    //   execute_buffer_max_credits(20), // Set execute_buffer_max_credits to 20
+    //   execute_buffer_current_credits(20), // Set execute_buffer_current_credits to 20 (starting full)
+    //   execute_buffer_bandwidth(2), // Set execute_buffer_bandwidth to 2
+    //   execute_buffer_latency(5), // Set execute_buffer_latency to 5
 
       cc_buffer_clock(0), // Initialize cc_buffer_clock to 0
       cc_buffer_clock_period(clockPeriod() + 5), // Set cc_buffer_clock_period using clockPeriod() + 5
@@ -83,6 +90,7 @@ void CC_Buffer::processBufferClockEvent()
 
     // test with new system
     decode_buffer_credits.updateCredits();
+    execute_buffer_credits.updateCredits();
 
     // DPRINTF(CC_Buffer_Flag, "----------> Num decode credits: %d, NEW Num decode credits: %d \n", decode_buffer_current_credits, decode_buffer_credits.getCredits());
 
@@ -110,13 +118,15 @@ CC_Buffer::updateDecodeBufferContents()
             DPRINTF(CC_Buffer_Flag, "Inst instDecodeCycle: %d\n", it->instDecodeCycle);
             // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits + 1);
             DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits() + 1);
-            DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits - 1);
+            // DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits - 1);
+            DPRINTF(CC_Buffer_Flag, "New num execute credits: %d\n", execute_buffer_credits.getCredits() - 1);
 
             //TODO: push items here to the execute_buffer
             //TODO: make sure execute_buffer not full
             // Add the string to the buffer
 
-            if (execute_buffer_current_credits <= 0) {
+            // if (execute_buffer_current_credits <= 0) {
+            if (execute_buffer_credits.getCredits() <= 0) {
                 //ASK: Stall the system?
                 buffer_system_stall_flag = 1;
 
@@ -124,7 +134,8 @@ CC_Buffer::updateDecodeBufferContents()
                 //execute buffer not full, so push inst.
                 execute_buffer.push_back(*it);
                 // reduce num decode credits
-                execute_buffer_current_credits--;
+                // execute_buffer_current_credits--;
+                execute_buffer_credits.decrementCredit();
                 // Remove the instruction from the buffer
                 it = decode_buffer.erase(it);
                 // update credits available
@@ -165,12 +176,14 @@ CC_Buffer::updateExecuteBufferContents()
             DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
             // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits);
             DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits());
-            DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits + 1);
+            // DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits + 1);
+            DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_credits.getCredits() + 1);
 
             // Remove the instruction from the buffer
             it = execute_buffer.erase(it);
 
-            execute_buffer_current_credits++;
+            // execute_buffer_current_credits++;
+            execute_buffer_credits.addCredit();
             num_functional_units_free++;
 
         } else { // case 2: inst has not been sent to the FUs yet and has not started executing
@@ -246,9 +259,9 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     decode_buffer_credits.decrementCredit();
 
     // Ensure the buffer size does not exceed max_credits
-    if (decode_buffer.size() >= decode_buffer_max_credits) {
-        DPRINTF(CC_Buffer_Flag, "Max credits reached, cannot add more items, CPU stalled.\n");
-    }
+    // if (decode_buffer.size() >= decode_buffer_max_credits) {
+    //     DPRINTF(CC_Buffer_Flag, "Max credits reached, cannot add more items, CPU stalled.\n");
+    // }
 
     //print buffer contents for debug
     std::string decode_buffer_contents = "[";

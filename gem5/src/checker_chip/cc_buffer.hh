@@ -48,21 +48,21 @@ class CC_Buffer : public ClockedObject
 
     // decode buffer modelling parameters
     std::deque<CheckerInst> decode_buffer; //actual buffer
-    uint decode_buffer_max_credits; // max insts buffer can hold
-    uint decode_buffer_current_credits; // current credits
+    // uint decode_buffer_max_credits; // max insts buffer can hold
+    // uint decode_buffer_current_credits; // current credits
     uint decode_buffer_bandwidth; //decode bandwidth
     uint decode_buffer_latency; // decode latency, replaces num_cycles_to_decode
 
     // execute buffer modelling parameters
     std::deque<CheckerInst> execute_buffer;
-    uint execute_buffer_max_credits;
-    uint execute_buffer_current_credits;
-    uint execute_buffer_bandwidth;
-    uint execute_buffer_latency; //all defns same as decode
+    // uint execute_buffer_max_credits;
+    // uint execute_buffer_current_credits;
+    // uint execute_buffer_bandwidth;
+    // uint execute_buffer_latency; //all defns same as decode
 
     // new credit system
     CheckerCreditSystem decode_buffer_credits; // Declare without parameters
-    // CheckerCreditSystem execute_buffer_credits; // Declare without parameters
+    CheckerCreditSystem execute_buffer_credits; // Declare without parameters
 
     // cc_buffer_clock tracks how many cc_buffer clock cycles have occured
     unsigned long cc_buffer_clock;
