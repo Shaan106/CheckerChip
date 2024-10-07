@@ -14,7 +14,7 @@ from gem5.isas import ISA
 # no cache
 cache_hierarchy = NoCache()
 # type of RAM, what size
-memory = SingleChannelDDR3_1600("1GiB")
+memory = SingleChannelDDR3_1600("8GiB")
 
 #processor
 #single core processor, 1 timing CPU processor

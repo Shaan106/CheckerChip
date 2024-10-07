@@ -28,8 +28,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       max_credits(params.maxCredits), // Initialize max_credits using the value from params
 
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
-    //   decode_buffer_max_credits(20), // Set decode_buffer_max_credits to 20
-    //   decode_buffer_current_credits(20), // Set decode_buffer_current_credits to 20 (starting full)
+
       decode_buffer_bandwidth(2), // Set decode_buffer_bandwidth to 2
       decode_buffer_latency(5), // Set decode_buffer_latency to 5
 
@@ -48,10 +47,6 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
                         ), // Initialize decode_buffer_credits using   
 
       execute_buffer(std::deque<CheckerInst>()), // Initialize execute_buffer as an empty deque explicitly
-    //   execute_buffer_max_credits(20), // Set execute_buffer_max_credits to 20
-    //   execute_buffer_current_credits(20), // Set execute_buffer_current_credits to 20 (starting full)
-    //   execute_buffer_bandwidth(2), // Set execute_buffer_bandwidth to 2
-    //   execute_buffer_latency(5), // Set execute_buffer_latency to 5
 
       cc_buffer_clock(0), // Initialize cc_buffer_clock to 0
       cc_buffer_clock_period(clockPeriod() + 5), // Set cc_buffer_clock_period using clockPeriod() + 5
@@ -59,8 +54,11 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       funcUnit(FuncUnit()), // Explicitly call default constructor of FuncUnit, initializing funcUnit
       num_functional_units(2), // Set num_functional_units to 2
       num_functional_units_free(2), // Set num_functional_units_free to 2 (initial state, all units are free)
-      functional_unit_pool(params.checkerFUPool),
-      instCount(0)
+      
+      functional_unit_pool(params.checkerFUPool), // FU pool
+
+      instCount(0),
+      debugStringMap({})
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
@@ -91,18 +89,23 @@ void CC_Buffer::processBufferClockEvent()
     // update execute buffer contents
     updateExecuteBufferContents();
 
+    // Process units that need to be freed at the end of this cycle (has to be after the updating of buffer contents)
+    functional_unit_pool->processFreeUnits();
+
     // test with new system
     decode_buffer_credits.updateCredits();
     execute_buffer_credits.updateCredits();
 
-    // DPRINTF(CC_Buffer_Flag, "----------> Num decode credits: %d, NEW Num decode credits: %d \n", decode_buffer_current_credits, decode_buffer_credits.getCredits());
-
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 
-    // if (cc_buffer_clock % 100 == 0) {
-    //     DPRINTF(CC_Buffer_Flag, "inst processed: %lu \n", instCount);
-    // }
+    //DEBUG for buffer clocks
+    if (cc_buffer_clock % 100 == 0) {
+        printf("clock_cycle: %lu\n", cc_buffer_clock);
+        for (const auto& pair : debugStringMap) {
+            printf("Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
+        }
+    }
 
 }
 
@@ -178,7 +181,7 @@ CC_Buffer::updateExecuteBufferContents()
         if (it->instExecuteCycle <= cc_buffer_clock && it->instInFU == true) {
             // Print the instruction being moved to execute
 
-            DPRINTF(CC_Buffer_Flag, "---------Executing instruction: %s---------\n", it->getStaticInst()->getName());
+            DPRINTF(CC_Buffer_Flag, "---------Finished executing instruction: %s---------\n", it->getStaticInst()->getName());
             DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
             DPRINTF(CC_Buffer_Flag, "New FUs free: %lu\n", num_functional_units_free + 1);
             DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
@@ -187,27 +190,51 @@ CC_Buffer::updateExecuteBufferContents()
             // DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits + 1);
             DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_credits.getCredits() + 1);
 
+            // Release the functional unit
+            functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
+
             // Remove the instruction from the buffer
             it = execute_buffer.erase(it);
 
             // execute_buffer_current_credits++;
             execute_buffer_credits.addCredit();
-            num_functional_units_free++;
+            // num_functional_units_free++;
 
         } else { // case 2: inst has not been sent to the FUs yet and has not started executing
-            if (num_functional_units_free > 0) {
+
+            // get if an FU is available to execute this instruction
+            int free_FU_idx = functional_unit_pool->getUnit(it->getStaticInst()->opClass());
+
+            if (free_FU_idx >= 0) { // if there is a free functional unit
                 //inst is now in fu
                 it->instInFU = true;
                 //inst execution cycle is current clock + operation's latency
-                it->instExecuteCycle = cc_buffer_clock + getOperationLatency(it->getStaticInst()->opClass());
-                //reduce number of FUs currently free
-                num_functional_units_free--;
-                //go to next item in buffer since more FUs are free
+                it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
+                //assign which functional unit used to execute
+                it->functional_unit_index = free_FU_idx;
+                
+                //go to next item in buffer since more FUs could be free
                 ++it;
-            } else {
-                // if no FUs free then stop.
-                DPRINTF(CC_Buffer_Flag, "All %d functional units full, cannot send inst to any more functional units\n", num_functional_units);
+
+            } else if (free_FU_idx == -1) { //if no functional units are free
+                DPRINTF(CC_Buffer_Flag, "All functional units full, cannot send inst to any more functional units, stalling inst: %s\n", it->getStaticInst()->getName());
                 return;
+
+            } else { //equivalent to fuCase == -2, if no functional units have the correct capability
+
+                if (it->getStaticInst()->getName() == "fault") {
+                    // DPRINTF(CC_Buffer_Flag, "Fault inst, going to default 4 cycle latency, no functional units capable of executing this instruction: %s\n", it->getStaticInst()->getName());
+
+                    // if the instruction is of a fault type, remove it because it's not a valid instruction
+                    // Remove the instruction from the buffer
+                    it = execute_buffer.erase(it);
+
+                    // execute_buffer_current_credits++;
+                    execute_buffer_credits.addCredit();
+                } else {
+                    DPRINTF(CC_Buffer_Flag, "!!! CRITICAL ERROR !!! No functional units capable of executing this instruction: %s\n", it->getStaticInst()->getName());
+                    return;
+                }
             }
             
         }
@@ -258,8 +285,9 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
 
     // test for functional unit
-    int inst_latency = getOperationLatency(checkerInst.getStaticInst()->opClass());
-    DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %d --------- !!!!!!!!!\n", inst_latency, checkerInst.instExecuteCycle);
+    debugStringMap[checkerInst.getStaticInst()->getName()] = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
+    int inst_latency = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
+    DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %lu --------- !!!!!!!!!\n", inst_latency, cc_buffer_clock + inst_latency);
     
 
     // Add the string to the buffer
@@ -315,12 +343,13 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 /*
 getOperationLatency gets the operation latency from a given operation and returns it.
 */
+// DEPRECIATED, CAN REMOVE
 int CC_Buffer::getOperationLatency(OpClass op_class) {
     int returnLatency = funcUnit.getLatencyForOp(op_class);
 
-    if (returnLatency == 0) {
-        return 4; // default val, not having 0 latency
-    }
+    // if (returnLatency == 0) {
+    //     return 4; // default val, not having 0 latency
+    // }
 
     return returnLatency;
 }
@@ -418,7 +447,6 @@ void CC_Buffer::initializeFuncUnit(FuncUnit &funcUnit) {
     funcUnit.addCapability(VectorMiscOp, constant_latency, false);
     funcUnit.addCapability(VectorIntegerExtensionOp, constant_latency, false);
     funcUnit.addCapability(VectorConfigOp, constant_latency, false);
-    // funcUnit.addCapability(Num_OpClasses, constant_latency, false); this is not an instruction this is a placeholder
     }
 
 } // namespace gem5

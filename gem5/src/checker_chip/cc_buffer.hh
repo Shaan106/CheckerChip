@@ -1,6 +1,8 @@
 #ifndef __CC_BUFFER_HH__
 #define __CC_BUFFER_HH__
 
+// #include <vector>
+#include <unordered_map>
 #include <string>
 #include <deque>  // Include deque for buffer storage
 
@@ -75,8 +77,9 @@ class CC_Buffer : public ClockedObject
     //define functional_unit_pool here
     gem5::o3::FUPool *functional_unit_pool;  // Pointer to functional unit pool instance, from CC_Buffer.py
 
-    // testing 
+    // testing/debug
     unsigned long instCount;
+    std::unordered_map<std::string, int> debugStringMap;
 
   public:
     CC_Buffer(const CC_BufferParams &p);

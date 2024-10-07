@@ -46,6 +46,9 @@ class IntALU(FUDesc):
     opList = [OpDesc(opClass="IntAlu")]
     count = 6
 
+class CustomIntALU(FUDesc):
+    opList = [OpDesc(opClass="IntAlu", opLat=1)]
+    count = 6
 
 class IntMultDiv(FUDesc):
     opList = [

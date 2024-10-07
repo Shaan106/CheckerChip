@@ -65,7 +65,7 @@ class DefaultFUPool(FUPool):
 
 class CheckerFUPool(FUPool):
     FUList = [
-        IntALU(),
+        CustomIntALU(),
         IntMultDiv(),
         FP_ALU(),
         FP_MultDiv(),

@@ -11,7 +11,8 @@ CheckerInst::CheckerInst(int instDecodeCycle,
     : instDecodeCycle(instDecodeCycle),
       instExecuteCycle(instExecuteCycle),
       instInFU(instInFU),
-      staticInst(staticInst) {}
+      staticInst(staticInst),
+      functional_unit_index(-1) {}
 
 
 // getting staticInst
