@@ -14,7 +14,7 @@ class CC_Buffer(ClockedObject):
     maxCredits = Param.Int(20, "Max Credits. How many items (credits) the buffer can hold")
 
     # creating a functional pool that is passed into the 
-    checkerFUPool = Param.FUPool(DefaultFUPool(), "Functional Unit pool for cc_buffer")
+    checkerFUPool = Param.FUPool(CheckerFUPool(), "Functional Unit pool for cc_buffer")
 
     # clk_domain = Param.ClockDomain(SrcClockDomain(clock="1GHz", voltage_domain=VoltageDomain()), "Clock domain")
 

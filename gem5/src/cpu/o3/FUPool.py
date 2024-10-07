@@ -62,3 +62,17 @@ class DefaultFUPool(FUPool):
         RdWrPort(),
         IprPort(),
     ]
+
+class CheckerFUPool(FUPool):
+    FUList = [
+        IntALU(),
+        IntMultDiv(),
+        FP_ALU(),
+        FP_MultDiv(),
+        ReadPort(),
+        SIMD_Unit(),
+        PredALU(),
+        WritePort(),
+        RdWrPort(),
+        IprPort(),
+    ]
