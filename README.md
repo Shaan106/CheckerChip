@@ -9,4 +9,9 @@ Live notes/documentation can be found [at this link](https://cypress-eye-9ef.not
 
 ## List of files changed in this project
 
-Within `/src/`
+Within `/src/`:
+
+`checker_chip/*`
+
+`o3/`
+`

@@ -73,10 +73,9 @@ class CC_Buffer : public ClockedObject
     void initializeFuncUnit(FuncUnit &funcUnit); // this is to set the initial "capabilities"
 
     //define functional_unit_pool here
-    gem5::o3::FUPool *functional_unit_pool;  // Pointer to FUPool instance, from CC_Buffer.py
+    gem5::o3::FUPool *functional_unit_pool;  // Pointer to functional unit pool instance, from CC_Buffer.py
 
     // testing 
-
     unsigned long instCount;
 
   public:

@@ -67,7 +67,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
     // Functional units setup (if there's more to set up than basic initialization)
     initializeFuncUnit(funcUnit);
 
-    functional_unit_pool->dump();
+    functional_unit_pool->dump(); // debug statement to check if functional pools exist
 
     // Schedule the buffer clock event to trigger after the initial period
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
