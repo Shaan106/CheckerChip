@@ -33,6 +33,7 @@ from ...utils.requires import requires
 from .base_cpu_core import BaseCPUCore
 from .cpu_types import CPUTypes
 
+# from m5.objects import CC_Buffer
 
 class SimpleCore(BaseCPUCore):
     """
@@ -40,11 +41,11 @@ class SimpleCore(BaseCPUCore):
     `SimpleCore` creates a single `SimObject` of that type.
     """
 
-    def __init__(self, cpu_type: CPUTypes, core_id: int, isa: ISA):
+    def __init__(self, cpu_type: CPUTypes, core_id: int, isa: ISA): #, cc_buffer: CC_Buffer
         requires(isa_required=isa)
         super().__init__(
             core=SimpleCore.cpu_simobject_factory(
-                isa=isa, cpu_type=cpu_type, core_id=core_id
+                isa=isa, cpu_type=cpu_type, core_id=core_id #, cc_buffer=cc_buffer
             ),
             isa=isa,
         )
@@ -138,7 +139,7 @@ class SimpleCore(BaseCPUCore):
 
     @classmethod
     def cpu_simobject_factory(
-        cls, cpu_type: CPUTypes, isa: ISA, core_id: int
+        cls, cpu_type: CPUTypes, isa: ISA, core_id: int #, cc_buffer: CC_Buffer
     ) -> BaseCPUCore:
         """
         A factory used to return the SimObject core object given the cpu type,
@@ -148,8 +149,10 @@ class SimpleCore(BaseCPUCore):
         :param cpu_type: The target CPU type.
         :param isa: The target ISA.
         :param core_id: The id of the core to be returned.
+        # :param cc_buffer: The shared CC_Buffer instance.
         """
 
         return cls.cpu_class_factory(cpu_type=cpu_type, isa=isa)(
-            cpu_id=core_id
+            cpu_id=core_id,
+            # cc_buffer=cc_buffer  # Pass the shared CC_Buffer instance
         )

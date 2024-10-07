@@ -16,6 +16,8 @@
 
 #include "checker_chip/cc_creditSystem.hh" // this is for the new credit latency system
 
+#include "cpu/o3/fu_pool.hh" // accessing FUPool
+
 namespace gem5
 {
 
@@ -48,17 +50,11 @@ class CC_Buffer : public ClockedObject
 
     // decode buffer modelling parameters
     std::deque<CheckerInst> decode_buffer; //actual buffer
-    // uint decode_buffer_max_credits; // max insts buffer can hold
-    // uint decode_buffer_current_credits; // current credits
     uint decode_buffer_bandwidth; //decode bandwidth
     uint decode_buffer_latency; // decode latency, replaces num_cycles_to_decode
 
     // execute buffer modelling parameters
     std::deque<CheckerInst> execute_buffer;
-    // uint execute_buffer_max_credits;
-    // uint execute_buffer_current_credits;
-    // uint execute_buffer_bandwidth;
-    // uint execute_buffer_latency; //all defns same as decode
 
     // new credit system
     CheckerCreditSystem decode_buffer_credits; // Declare without parameters
@@ -75,6 +71,13 @@ class CC_Buffer : public ClockedObject
     uint num_functional_units;
     uint num_functional_units_free;
     void initializeFuncUnit(FuncUnit &funcUnit); // this is to set the initial "capabilities"
+
+    //define functional_unit_pool here
+    gem5::o3::FUPool *functional_unit_pool;  // Pointer to FUPool instance, from CC_Buffer.py
+
+    // testing 
+
+    unsigned long instCount;
 
   public:
     CC_Buffer(const CC_BufferParams &p);

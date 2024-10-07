@@ -34,6 +34,7 @@ from ..processors.simple_core import SimpleCore
 from .base_cpu_processor import BaseCPUProcessor
 from .cpu_types import CPUTypes
 
+# from m5.objects.CC_Buffer import CC_Buffer  # Import the CC_Buffer
 
 class SimpleProcessor(BaseCPUProcessor):
     """
@@ -44,14 +45,21 @@ class SimpleProcessor(BaseCPUProcessor):
     def __init__(self, cpu_type: CPUTypes, num_cores: int, isa: ISA) -> None:
         """
         :param cpu_type: The CPU type for each type in the processor.
-
         :param num_cores: The number of CPU cores in the processor.
-
         :param isa: The ISA of the processor.
         """
+
+        # Create a single shared CC_Buffer instance for all cores
+        # shared_cc_buffer = CC_Buffer(maxCredits=25)
+
         super().__init__(
             cores=[
-                SimpleCore(cpu_type=cpu_type, core_id=i, isa=isa)
+                SimpleCore(
+                    cpu_type=cpu_type, 
+                    core_id=i, 
+                    isa=isa,
+                    # cc_buffer=shared_cc_buffer  # Pass the shared CC_Buffer to each core
+                )
                 for i in range(num_cores)
             ]
         )

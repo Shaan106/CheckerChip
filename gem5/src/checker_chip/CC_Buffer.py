@@ -1,4 +1,5 @@
 from m5.params import *
+from m5.objects.FUPool import *
 # from m5.SimObject import SimObject
 from m5.objects.ClockedObject import ClockedObject #<--------------
 # from m5.objects import SrcClockDomain, VoltageDomain
@@ -11,6 +12,8 @@ class CC_Buffer(ClockedObject):
     cxx_class = "gem5::CC_Buffer"
 
     maxCredits = Param.Int(20, "Max Credits. How many items (credits) the buffer can hold")
+
+    checkerFUPool = Param.FUPool(DefaultFUPool(), "Functional Unit pool for cc_buffer")
 
     # clk_domain = Param.ClockDomain(SrcClockDomain(clock="1GHz", voltage_domain=VoltageDomain()), "Clock domain")
 

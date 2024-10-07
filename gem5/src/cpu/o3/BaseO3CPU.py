@@ -197,19 +197,8 @@ class BaseO3CPU(BaseCPU):
     )
     needsTSO = Param.Bool(False, "Enable TSO Memory model")
 
-    # TAG add cc_buffer to BaseO3CPU, default init to an instance
-    # Create a clock domain for cc_buffer
-    # cc_buffer_clock_domain = SrcClockDomain(
-    #     clock="1GHz",  # Set the desired clock frequency for cc_buffer
-    #     voltage_domain=VoltageDomain()
-    # )
-
-    # # Initialize cc_buffer with a different clock domain
-    # cc_buffer = Param.CC_Buffer(
-    #     CC_Buffer(clock_domain=cc_buffer_clock_domain),
-    #     "A CC_Buffer object, with a different clock domain"
-    # )
+    # TAG
     cc_buffer = Param.CC_Buffer(
-        CC_Buffer(),
+        CC_Buffer(maxCredits=25),
         "A CC_Buffer object, with a different clock domain"
     )

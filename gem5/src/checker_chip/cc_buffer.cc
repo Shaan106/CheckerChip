@@ -35,14 +35,14 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       decode_buffer_credits(
                         &cc_buffer_clock,
-                        20, //max_credits = 20
+                        params.maxCredits, //max_credits = 20
                         1, //unsigned long default_latency_add = 0
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        20, //max_credits = 20
+                        params.maxCredits, //max_credits = 20
                         1, //unsigned long default_latency_add = 0
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -58,17 +58,20 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       funcUnit(FuncUnit()), // Explicitly call default constructor of FuncUnit, initializing funcUnit
       num_functional_units(2), // Set num_functional_units to 2
-      num_functional_units_free(2) // Set num_functional_units_free to 2 (initial state, all units are free)
+      num_functional_units_free(2), // Set num_functional_units_free to 2 (initial state, all units are free)
+      functional_unit_pool(params.checkerFUPool),
+      instCount(0)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
     // Functional units setup (if there's more to set up than basic initialization)
     initializeFuncUnit(funcUnit);
 
+    functional_unit_pool->dump();
+
     // Schedule the buffer clock event to trigger after the initial period
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 }
-
 
 /*
 processBufferClockEvent is a function that gets called every cc_buffer_clock_period ticks
@@ -96,6 +99,11 @@ void CC_Buffer::processBufferClockEvent()
 
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
+
+    // if (cc_buffer_clock % 100 == 0) {
+    //     DPRINTF(CC_Buffer_Flag, "inst processed: %lu \n", instCount);
+    // }
+
 }
 
 
@@ -235,6 +243,8 @@ CC_Buffer::~CC_Buffer()
 void
 CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 {
+    //
+    instCount = instCount + 1;
 
     // convert instruction into custom checker type
     CheckerInst checkerInst = instantiateObject(instName);
@@ -341,73 +351,73 @@ void CC_Buffer::initializeFuncUnit(FuncUnit &funcUnit) {
     funcUnit.addCapability(FloatMiscOp, constant_latency, false);
     funcUnit.addCapability(FloatSqrtOp, constant_latency, false);
 
-    // funcUnit.addCapability(SimdAddOp, constant_latency, false);
-    // funcUnit.addCapability(SimdAddAccOp, constant_latency, false);
-    // funcUnit.addCapability(SimdAluOp, constant_latency, false);
-    // funcUnit.addCapability(SimdCmpOp, constant_latency, false);
-    // funcUnit.addCapability(SimdCvtOp, constant_latency, false);
-    // funcUnit.addCapability(SimdMiscOp, constant_latency, false);
-    // funcUnit.addCapability(SimdMultOp, constant_latency, false);
-    // funcUnit.addCapability(SimdMultAccOp, constant_latency, false);
-    // funcUnit.addCapability(SimdMatMultAccOp, constant_latency, false);
-    // funcUnit.addCapability(SimdShiftOp, constant_latency, false);
-    // funcUnit.addCapability(SimdShiftAccOp, constant_latency, false);
-    // funcUnit.addCapability(SimdDivOp, constant_latency, false);
-    // funcUnit.addCapability(SimdSqrtOp, constant_latency, false);
-    // funcUnit.addCapability(SimdReduceAddOp, constant_latency, false);
-    // funcUnit.addCapability(SimdReduceAluOp, constant_latency, false);
-    // funcUnit.addCapability(SimdReduceCmpOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatAddOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatAluOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatCmpOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatCvtOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatDivOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatMiscOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatMultOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatMultAccOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatMatMultAccOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatSqrtOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatReduceCmpOp, constant_latency, false);
-    // funcUnit.addCapability(SimdFloatReduceAddOp, constant_latency, false);
-    // funcUnit.addCapability(SimdAesOp, constant_latency, false);
-    // funcUnit.addCapability(SimdAesMixOp, constant_latency, false);
-    // funcUnit.addCapability(SimdSha1HashOp, constant_latency, false);
-    // funcUnit.addCapability(SimdSha1Hash2Op, constant_latency, false);
-    // funcUnit.addCapability(SimdSha256HashOp, constant_latency, false);
-    // funcUnit.addCapability(SimdSha256Hash2Op, constant_latency, false);
-    // funcUnit.addCapability(SimdShaSigma2Op, constant_latency, false);
-    // funcUnit.addCapability(SimdShaSigma3Op, constant_latency, false);
-    // funcUnit.addCapability(SimdPredAluOp, constant_latency, false);
+    funcUnit.addCapability(SimdAddOp, constant_latency, false);
+    funcUnit.addCapability(SimdAddAccOp, constant_latency, false);
+    funcUnit.addCapability(SimdAluOp, constant_latency, false);
+    funcUnit.addCapability(SimdCmpOp, constant_latency, false);
+    funcUnit.addCapability(SimdCvtOp, constant_latency, false);
+    funcUnit.addCapability(SimdMiscOp, constant_latency, false);
+    funcUnit.addCapability(SimdMultOp, constant_latency, false);
+    funcUnit.addCapability(SimdMultAccOp, constant_latency, false);
+    funcUnit.addCapability(SimdMatMultAccOp, constant_latency, false);
+    funcUnit.addCapability(SimdShiftOp, constant_latency, false);
+    funcUnit.addCapability(SimdShiftAccOp, constant_latency, false);
+    funcUnit.addCapability(SimdDivOp, constant_latency, false);
+    funcUnit.addCapability(SimdSqrtOp, constant_latency, false);
+    funcUnit.addCapability(SimdReduceAddOp, constant_latency, false);
+    funcUnit.addCapability(SimdReduceAluOp, constant_latency, false);
+    funcUnit.addCapability(SimdReduceCmpOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatAddOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatAluOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatCmpOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatCvtOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatDivOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatMiscOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatMultOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatMultAccOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatMatMultAccOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatSqrtOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatReduceCmpOp, constant_latency, false);
+    funcUnit.addCapability(SimdFloatReduceAddOp, constant_latency, false);
+    funcUnit.addCapability(SimdAesOp, constant_latency, false);
+    funcUnit.addCapability(SimdAesMixOp, constant_latency, false);
+    funcUnit.addCapability(SimdSha1HashOp, constant_latency, false);
+    funcUnit.addCapability(SimdSha1Hash2Op, constant_latency, false);
+    funcUnit.addCapability(SimdSha256HashOp, constant_latency, false);
+    funcUnit.addCapability(SimdSha256Hash2Op, constant_latency, false);
+    funcUnit.addCapability(SimdShaSigma2Op, constant_latency, false);
+    funcUnit.addCapability(SimdShaSigma3Op, constant_latency, false);
+    funcUnit.addCapability(SimdPredAluOp, constant_latency, false);
 
-    // funcUnit.addCapability(MatrixOp, constant_latency, false);
-    // funcUnit.addCapability(MatrixMovOp, constant_latency, false);
-    // funcUnit.addCapability(MatrixOPOp, constant_latency, false);
-    // funcUnit.addCapability(MemReadOp, constant_latency, false);
-    // funcUnit.addCapability(MemWriteOp, constant_latency, false);
+    funcUnit.addCapability(MatrixOp, constant_latency, false);
+    funcUnit.addCapability(MatrixMovOp, constant_latency, false);
+    funcUnit.addCapability(MatrixOPOp, constant_latency, false);
+    funcUnit.addCapability(MemReadOp, constant_latency, false);
+    funcUnit.addCapability(MemWriteOp, constant_latency, false);
 
-    // funcUnit.addCapability(FloatMemReadOp, constant_latency, false);
-    // funcUnit.addCapability(FloatMemWriteOp, constant_latency, false);
-    // funcUnit.addCapability(IprAccessOp, constant_latency, false);
-    // funcUnit.addCapability(InstPrefetchOp, constant_latency, false);
-    // funcUnit.addCapability(VectorUnitStrideLoadOp, constant_latency, false);
-    // funcUnit.addCapability(VectorUnitStrideStoreOp, constant_latency, false);
-    // funcUnit.addCapability(VectorUnitStrideMaskLoadOp, constant_latency, false);
-    // funcUnit.addCapability(VectorUnitStrideMaskStoreOp, constant_latency, false);
-    // funcUnit.addCapability(VectorStridedLoadOp, constant_latency, false);
-    // funcUnit.addCapability(VectorStridedStoreOp, constant_latency, false);
-    // funcUnit.addCapability(VectorIndexedLoadOp, constant_latency, false);
-    // funcUnit.addCapability(VectorIndexedStoreOp, constant_latency, false);
-    // funcUnit.addCapability(VectorUnitStrideFaultOnlyFirstLoadOp, constant_latency, false);
-    // funcUnit.addCapability(VectorWholeRegisterLoadOp, constant_latency, false);
-    // funcUnit.addCapability(VectorWholeRegisterStoreOp, constant_latency, false);
-    // funcUnit.addCapability(VectorIntegerArithOp, constant_latency, false);
-    // funcUnit.addCapability(VectorFloatArithOp, constant_latency, false);
-    // funcUnit.addCapability(VectorFloatConvertOp, constant_latency, false);
-    // funcUnit.addCapability(VectorIntegerReduceOp, constant_latency, false);
-    // funcUnit.addCapability(VectorFloatReduceOp, constant_latency, false);
-    // funcUnit.addCapability(VectorMiscOp, constant_latency, false);
-    // funcUnit.addCapability(VectorIntegerExtensionOp, constant_latency, false);
-    // funcUnit.addCapability(VectorConfigOp, constant_latency, false);
+    funcUnit.addCapability(FloatMemReadOp, constant_latency, false);
+    funcUnit.addCapability(FloatMemWriteOp, constant_latency, false);
+    funcUnit.addCapability(IprAccessOp, constant_latency, false);
+    funcUnit.addCapability(InstPrefetchOp, constant_latency, false);
+    funcUnit.addCapability(VectorUnitStrideLoadOp, constant_latency, false);
+    funcUnit.addCapability(VectorUnitStrideStoreOp, constant_latency, false);
+    funcUnit.addCapability(VectorUnitStrideMaskLoadOp, constant_latency, false);
+    funcUnit.addCapability(VectorUnitStrideMaskStoreOp, constant_latency, false);
+    funcUnit.addCapability(VectorStridedLoadOp, constant_latency, false);
+    funcUnit.addCapability(VectorStridedStoreOp, constant_latency, false);
+    funcUnit.addCapability(VectorIndexedLoadOp, constant_latency, false);
+    funcUnit.addCapability(VectorIndexedStoreOp, constant_latency, false);
+    funcUnit.addCapability(VectorUnitStrideFaultOnlyFirstLoadOp, constant_latency, false);
+    funcUnit.addCapability(VectorWholeRegisterLoadOp, constant_latency, false);
+    funcUnit.addCapability(VectorWholeRegisterStoreOp, constant_latency, false);
+    funcUnit.addCapability(VectorIntegerArithOp, constant_latency, false);
+    funcUnit.addCapability(VectorFloatArithOp, constant_latency, false);
+    funcUnit.addCapability(VectorFloatConvertOp, constant_latency, false);
+    funcUnit.addCapability(VectorIntegerReduceOp, constant_latency, false);
+    funcUnit.addCapability(VectorFloatReduceOp, constant_latency, false);
+    funcUnit.addCapability(VectorMiscOp, constant_latency, false);
+    funcUnit.addCapability(VectorIntegerExtensionOp, constant_latency, false);
+    funcUnit.addCapability(VectorConfigOp, constant_latency, false);
     // funcUnit.addCapability(Num_OpClasses, constant_latency, false); this is not an instruction this is a placeholder
     }
 
