@@ -3,6 +3,7 @@
 #define cc_creditSystem_HH
 
 #include <unordered_map>
+#include <array>
 
 class CheckerCreditSystem {
 
@@ -17,7 +18,11 @@ private:
     unsigned long default_latency_remove; //default latency in removing a credit
     
     //hashmap to track credit updates in transit
-    std::unordered_map<unsigned long,int> credit_transit_map = {};
+    // std::unordered_map<unsigned long,int> credit_transit_map = {};
+
+    std::array<int, 32> credit_transit_array = {}; // assuming it never takes more than 32 cycles to transmit a piece of data
+
+    const unsigned long mapping_bit_mask = 31; // bit mask used to find where to put cycle transit data into
 
 public:
 
