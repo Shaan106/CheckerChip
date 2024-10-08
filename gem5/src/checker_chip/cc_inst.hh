@@ -23,6 +23,12 @@ public:
     //bool to check whether inst has been assigned a functional unit
     bool instInFU;
 
+    //bool to check if Iword was verified
+    bool iVerify_bit;
+
+    //bool to check if exec was verified
+    bool execVerify_bit;
+
     //which functional unit is executing this instruction, used to free fu when done
     int functional_unit_index; 
 

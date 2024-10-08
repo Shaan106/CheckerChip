@@ -11,6 +11,8 @@ CheckerInst::CheckerInst(int instDecodeCycle,
     : instDecodeCycle(instDecodeCycle),
       instExecuteCycle(instExecuteCycle),
       instInFU(instInFU),
+      iVerify_bit(false),
+      execVerify_bit(false),
       staticInst(staticInst),
       functional_unit_index(-1) {}
 

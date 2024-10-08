@@ -101,9 +101,9 @@ void CC_Buffer::processBufferClockEvent()
 
     //DEBUG for buffer clocks
     if (cc_buffer_clock % 100 == 0) {
-        printf("clock_cycle: %lu\n", cc_buffer_clock);
+        DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
         for (const auto& pair : debugStringMap) {
-            printf("Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
+            DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
         }
     }
 
@@ -174,6 +174,7 @@ void
 CC_Buffer::updateExecuteBufferContents()
 {
     // Iterate over the execute buffer to find and remove expired instructions
+    // iterates with ++it and it = buffer.erase()
     for (auto it = execute_buffer.begin(); it != execute_buffer.end(); )
     {
         // case 1: the instruction has been executed by the functional units.
@@ -185,20 +186,27 @@ CC_Buffer::updateExecuteBufferContents()
             DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
             DPRINTF(CC_Buffer_Flag, "New FUs free: %lu\n", num_functional_units_free + 1);
             DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
-            // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits);
             DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits());
-            // DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits + 1);
             DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_credits.getCredits() + 1);
 
             // Release the functional unit
             functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
 
-            // Remove the instruction from the buffer
-            it = execute_buffer.erase(it);
+            // set instruction as functionally verified
+            it->execVerify_bit = true;
 
-            // execute_buffer_current_credits++;
-            execute_buffer_credits.addCredit();
-            // num_functional_units_free++;
+            // calculate expression to check if instruction is fully verified and can be dropped/sent to mem
+            bool inst_verified = it->execVerify_bit && it->iVerify_bit;
+
+            if (inst_verified) {
+                // Remove the instruction from the buffer
+                it = execute_buffer.erase(it);
+
+                // execute_buffer_current_credits++;
+                execute_buffer_credits.addCredit();
+            } else {
+                DPRINTF(CC_Buffer_Flag, "Instruction %s could not be removed, not fully verified\n", it->getStaticInst()->getName());
+            }
 
         } else { // case 2: inst has not been sent to the FUs yet and has not started executing
 
@@ -276,12 +284,12 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     // convert instruction into custom checker type
     CheckerInst checkerInst = instantiateObject(instName);
 
-    // random clock and other debug statements
-    // DPRINTF(CC_Buffer_Flag, "Current tick: %lu\n", curTick()); // Print the current simulation tick
-    // Tick period = clockPeriod(); // Get and print the clock period in ticks
-    // // DPRINTF(CC_Buffer_Flag, "Clock period: %lu ticks\n", period);
+    // set verification bits for all things not implemented yet
+    checkerInst.iVerify_bit = true;
+
     Cycles currentCycle = Cycles(clockEdge() / clockPeriod());     // Compute and print the current clock cycle
     DPRINTF(CC_Buffer_Flag, "Current CPU clock cycle: %lu\n", currentCycle);
+    DPRINTF(CC_Buffer_Flag, "Current cc_buffer clock cycle: %lu\n", cc_buffer_clock);
     DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
 
     // test for functional unit
@@ -292,14 +300,9 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 
     // Add the string to the buffer
     decode_buffer.push_back(checkerInst);
-    // reduce num decode credits
-    // decode_buffer_current_credits--;
-    decode_buffer_credits.decrementCredit();
 
-    // Ensure the buffer size does not exceed max_credits
-    // if (decode_buffer.size() >= decode_buffer_max_credits) {
-    //     DPRINTF(CC_Buffer_Flag, "Max credits reached, cannot add more items, CPU stalled.\n");
-    // }
+    // reduce num decode credits
+    decode_buffer_credits.decrementCredit();
 
     //print buffer contents for debug
     std::string decode_buffer_contents = "[";
