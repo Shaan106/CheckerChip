@@ -213,7 +213,11 @@ CC_Buffer::updateExecuteBufferContents()
                 // execute_buffer_current_credits++;
                 execute_buffer_credits.addCredit();
             } else {
+                // if instruction is not verified
                 DPRINTF(CC_Buffer_Flag, "Instruction %s could not be removed, not fully verified\n", it->getStaticInst()->getName());
+
+                // if not verified we also want to return to ensure no newer instructions can be removed from the buffer
+                return;
             }
 
         } else { // case 2: inst has not been sent to the FUs yet and has not started executing
