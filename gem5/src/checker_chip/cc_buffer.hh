@@ -102,8 +102,20 @@ class CC_Buffer : public ClockedObject
     /*
     stats to measure
     */
-    statistics::Scalar ooo_stall_cycles;
+    // Override the regStats method
+    void regStats() override;
+
+    statistics::Scalar cc_buffer_cycles;
+    statistics::Scalar ooo_stall_signals;
     void addStallCycle();
+
+    // statistics::Scalar decode_buffer_occupancy_total;
+    // statistics::Formula decode_buffer_occupancy_avg;
+
+    // statistics::Scalar decode_buffer_occupancy_maximum;
+
+    statistics::Distribution decode_buffer_occupancy_histogram;
+
     
 };
 

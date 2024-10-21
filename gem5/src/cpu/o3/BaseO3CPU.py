@@ -199,6 +199,6 @@ class BaseO3CPU(BaseCPU):
 
     # TAG
     cc_buffer = Param.CC_Buffer(
-        CC_Buffer(maxCredits=20),
+        CC_Buffer(maxCredits=64),
         "A CC_Buffer object, with a different clock domain"
     )

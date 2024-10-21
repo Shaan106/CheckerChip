@@ -66,11 +66,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
     if (obj_name.find("cores0") != std::string::npos || obj_name.find("core0") != std::string::npos) {
         is_active_cc_buffer = true;
         
-        ooo_stall_cycles
-            .name(name() + ".ooo_stall_cycles")
-            .desc("Number of cycles stalled due to buffer")
-            .flags(statistics::total);
-
+        // stats registered in regStats
+    
         functional_unit_pool->dump(); // debug statement to check if functional pools exist
 
         // Schedule the buffer clock event to trigger after the initial period
@@ -102,6 +99,17 @@ void CC_Buffer::processBufferClockEvent()
     // test with new system
     decode_buffer_credits.updateCredits();
     execute_buffer_credits.updateCredits();
+
+    //stats update for the current clock cycle
+    cc_buffer_cycles++;
+
+    // decode_buffer_occupancy_total += decode_buffer.size();
+
+    if (decode_buffer.size() > decode_buffer_occupancy_maximum.value()) {
+        decode_buffer_occupancy_maximum = decode_buffer.size();
+    }
+
+    decode_buffer_occupancy_histogram.sample(decode_buffer.size());
 
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
@@ -353,7 +361,50 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 void
 CC_Buffer::addStallCycle() 
 {
-    ooo_stall_cycles++;
+    ooo_stall_signals++;
+}
+
+void CC_Buffer::regStats()
+{
+    ClockedObject::regStats(); // Call base class regStats()
+
+    // Initialize statistics
+    cc_buffer_cycles
+        .name(name() + ".cc_buffer_cycles")
+        .desc("Number of cc_buffer cycles executed")
+        .flags(statistics::total);
+
+    ooo_stall_signals
+        .name(name() + ".ooo_stall_signals")
+        .desc("Number of cycles stalled due to buffer")
+        .flags(statistics::total);
+
+    // decode_buffer_occupancy_total
+    //     .name(name() + ".decode_buffer_occupancy_total")
+    //     .desc("Total occupancy of the decode buffer over time")
+    //     .flags(statistics::total);
+
+    // decode_buffer_occupancy_avg
+    //     .name(name() + ".decode_buffer_occupancy_avg")
+    //     .desc("Average occupancy of the decode buffer")
+    //     .precision(2);
+
+    // decode_buffer_occupancy_maximum
+    //     .name(name() + ".decode_buffer_occupancy_maximum")
+    //     .desc("Maximum occupancy of the decode buffer")
+    //     .flags(statistics::total);
+
+    decode_buffer_occupancy_histogram
+        .init(int64_t(0), int64_t(max_credits), int64_t(1))
+        .name(name() + ".decode_buffer_occupancy_histogram")
+        .desc("Distribution of decode buffer occupancy")
+        .flags(statistics::pdf | statistics::display);
+
+    // Set up the formula for average occupancy
+    // decode_buffer_occupancy_avg = decode_buffer_occupancy_avg / cc_buffer_cycles;
+
+    // initially = 0
+    // decode_buffer_occupancy_maximum = 0;
 }
 
 } // namespace gem5
