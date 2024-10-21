@@ -1158,6 +1158,7 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     if (cc_buffer->getNumCredits() <= 0) {
       //DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
       //DPRINTF(CC_Buffer_Flag, "stall ");
+      cc_buffer->addStallCycle();
       DPRINTF(CC_Buffer_Flag, "checker buffer full at instruction: %s\n", head_inst->staticInst->getName());
       return false; // return false stalls the CPU
     }

@@ -20,6 +20,8 @@
 
 #include "cpu/o3/fu_pool.hh" // accessing FUPool
 
+#include "base/statistics.hh" //for custom stats
+
 namespace gem5
 {
 
@@ -68,12 +70,6 @@ class CC_Buffer : public ClockedObject
     // cc_buffer_clock_period is how many ticks per cc_buffer_clock cycle
     unsigned long cc_buffer_clock_period;
 
-    // instance of a functional unit
-    FuncUnit funcUnit;
-    uint num_functional_units;
-    uint num_functional_units_free;
-    void initializeFuncUnit(FuncUnit &funcUnit); // this is to set the initial "capabilities"
-
     //define functional_unit_pool here
     gem5::o3::FUPool *functional_unit_pool;  // Pointer to functional unit pool instance, from CC_Buffer.py
 
@@ -100,8 +96,11 @@ class CC_Buffer : public ClockedObject
     */
     uint getNumCredits();
 
-    // Function to get latency for an operation
-    int getOperationLatency(OpClass op_class);
+    /*
+    stats to measure
+    */
+    statistics::Scalar ooo_stall_cycles;
+    void addStallCycle();
     
 };
 
