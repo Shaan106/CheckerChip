@@ -27,6 +27,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       bufferClockEvent([this] { processBufferClockEvent(); }, name() + ".bufferClockEvent"), // Initialize bufferClockEvent with the provided lambda function
       max_credits(params.maxCredits), // Initialize max_credits using the value from params
 
+      is_active_cc_buffer(false),
+
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
 
       decode_buffer_bandwidth(2), // Set decode_buffer_bandwidth to 2
@@ -58,15 +60,22 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
-    ooo_stall_cycles
-        .name(name() + ".ooo_stall_cycles")
-        .desc("Number of cycles stalled due to buffer")
-        .flags(statistics::total);
+    std::string obj_name = name();
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Object name is %s\n", obj_name);
 
-    functional_unit_pool->dump(); // debug statement to check if functional pools exist
+    if (obj_name.find("cores0") != std::string::npos || obj_name.find("core0") != std::string::npos) {
+        is_active_cc_buffer = true;
+        
+        ooo_stall_cycles
+            .name(name() + ".ooo_stall_cycles")
+            .desc("Number of cycles stalled due to buffer")
+            .flags(statistics::total);
 
-    // Schedule the buffer clock event to trigger after the initial period
-    schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
+        functional_unit_pool->dump(); // debug statement to check if functional pools exist
+
+        // Schedule the buffer clock event to trigger after the initial period
+        schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
+    }
 }
 
 /*

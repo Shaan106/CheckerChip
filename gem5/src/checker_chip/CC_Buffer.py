@@ -11,7 +11,7 @@ class CC_Buffer(ClockedObject):
     cxx_header = "checker_chip/cc_buffer.hh"
     cxx_class = "gem5::CC_Buffer"
 
-    maxCredits = Param.Int(20, "Max Credits. How many items (credits) the buffer can hold")
+    maxCredits = Param.Int(128, "Max Credits. How many items (credits) the buffer can hold")
 
     # creating a functional pool that is passed into the 
     checkerFUPool = Param.FUPool(CheckerFUPool(), "Functional Unit pool for cc_buffer")

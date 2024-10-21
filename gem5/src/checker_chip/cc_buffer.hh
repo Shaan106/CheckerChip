@@ -35,6 +35,9 @@ class CC_Buffer : public ClockedObject
     */
     EventFunctionWrapper bufferClockEvent;
 
+    // a boolean to only enable clock loop if cc_buffer associated with core0
+    bool is_active_cc_buffer;
+
     void processBufferClockEvent();
 
     // decode_buffer update
