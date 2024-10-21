@@ -27,8 +27,6 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       bufferClockEvent([this] { processBufferClockEvent(); }, name() + ".bufferClockEvent"), // Initialize bufferClockEvent with the provided lambda function
       max_credits(params.maxCredits), // Initialize max_credits using the value from params
 
-      is_active_cc_buffer(false),
-
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
 
       decode_buffer_bandwidth(2), // Set decode_buffer_bandwidth to 2
@@ -62,17 +60,12 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
     std::string obj_name = name();
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Object name is %s\n", obj_name);
-
-    if (obj_name.find("cores0") != std::string::npos || obj_name.find("core0") != std::string::npos) {
-        is_active_cc_buffer = true;
-        
-        // stats registered in regStats
     
-        functional_unit_pool->dump(); // debug statement to check if functional pools exist
+    // stats registered in regStats
+    functional_unit_pool->dump(); // debug statement to check if functional pools exist
 
-        // Schedule the buffer clock event to trigger after the initial period
-        schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
-    }
+    // Schedule the buffer clock event to trigger after the initial period
+    schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 }
 
 /*
@@ -105,9 +98,9 @@ void CC_Buffer::processBufferClockEvent()
 
     // decode_buffer_occupancy_total += decode_buffer.size();
 
-    if (decode_buffer.size() > decode_buffer_occupancy_maximum.value()) {
-        decode_buffer_occupancy_maximum = decode_buffer.size();
-    }
+    // if (decode_buffer.size() > decode_buffer_occupancy_maximum.value()) {
+    //     decode_buffer_occupancy_maximum = decode_buffer.size();
+    // }
 
     decode_buffer_occupancy_histogram.sample(decode_buffer.size());
 
