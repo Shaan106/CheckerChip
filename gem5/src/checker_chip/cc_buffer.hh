@@ -122,6 +122,8 @@ class CC_Buffer : public ClockedObject
 
     statistics::Distribution decode_buffer_occupancy_histogram;
 
+    statistics::Distribution execute_buffer_occupancy_histogram;
+
     
 };
 

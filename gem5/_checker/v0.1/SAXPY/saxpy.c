@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <omp.h>
 
-#define N 1000
-#define NUM_THREADS 8
+#define N 1000 //number of operations to do 
+#define NUM_THREADS 8 //how many threads
 
 int main() {
-    float a = 2.0f;
-    float *x, *y;
+    float a = 2.0f; //constant
+    float *x, *y; // x,y pointers
 
-    // Allocate memory on the heap
+    //alloc mem
     x = (float *)malloc(N * sizeof(float));
     y = (float *)malloc(N * sizeof(float));
 
@@ -18,25 +18,25 @@ int main() {
         return 1;
     }
 
-    // Initialize vectors
+    //initialise x and y
     for (int i = 0; i < N; i++) {
         x[i] = i * 1.0f;
         y[i] = i * 2.0f;
     }
 
-    // Set the number of threads
+    //num threads to run on
     omp_set_num_threads(NUM_THREADS);
 
-    // SAXPY operation using OpenMP
+    //OpenMP parallelism
     #pragma omp parallel for
     for (int i = 0; i < N; i++) {
         y[i] = a * x[i] + y[i];
     }
 
-    // Optional: verify results or output
+    //output when complete
     printf("Completed SAXPY computation (v2).\n");
 
-    // Free allocated memory
+    // free the stuff
     free(x);
     free(y);
 

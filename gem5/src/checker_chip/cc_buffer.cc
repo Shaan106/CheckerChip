@@ -105,6 +105,7 @@ void CC_Buffer::processBufferClockEvent()
     //stats update for the current clock cycle
     cc_buffer_cycles++;
     decode_buffer_occupancy_histogram.sample(decode_buffer.size());
+    execute_buffer_occupancy_histogram.sample(execute_buffer.size());
 
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
@@ -385,6 +386,11 @@ void CC_Buffer::regStats()
         .desc("Distribution of decode buffer occupancy")
         .flags(statistics::pdf | statistics::display);
 
+    execute_buffer_occupancy_histogram
+        .init(int64_t(0), int64_t(max_credits), int64_t(1))
+        .name(name() + ".execute_buffer_occupancy_histogram")
+        .desc("Distribution of decode buffer occupancy")
+        .flags(statistics::pdf | statistics::display);
     // Set up the formula for average occupancy
     // decode_buffer_occupancy_avg = decode_buffer_occupancy_avg / cc_buffer_cycles;
 
