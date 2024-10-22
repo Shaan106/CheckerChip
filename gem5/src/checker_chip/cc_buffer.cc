@@ -53,6 +53,12 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       
       functional_unit_pool(params.checkerFUPool), // FU pool
 
+      checker_regfile(
+            &cc_buffer_clock,
+            8, //latency
+            4 //bandwidth
+      ), //Checker regfile
+
       instCount(0),
       debugStringMap({})
 {
@@ -93,15 +99,11 @@ void CC_Buffer::processBufferClockEvent()
     decode_buffer_credits.updateCredits();
     execute_buffer_credits.updateCredits();
 
+    // update Regfile stuff
+    regfile_insts_processed = regfile_insts_processed.value() + checker_regfile.updateRegfile();
+
     //stats update for the current clock cycle
     cc_buffer_cycles++;
-
-    // decode_buffer_occupancy_total += decode_buffer.size();
-
-    // if (decode_buffer.size() > decode_buffer_occupancy_maximum.value()) {
-    //     decode_buffer_occupancy_maximum = decode_buffer.size();
-    // }
-
     decode_buffer_occupancy_histogram.sample(decode_buffer.size());
 
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
@@ -181,85 +183,66 @@ CC_Buffer::updateDecodeBufferContents()
 void 
 CC_Buffer::updateExecuteBufferContents()
 {
-    // Iterate over the execute buffer to find and remove expired instructions
-    // iterates with ++it and it = buffer.erase()
     for (auto it = execute_buffer.begin(); it != execute_buffer.end(); )
     {
-        // case 1: the instruction has been executed by the functional units.
-        // therefore, if execute cycle reached and inst is in fu then do this part
         if (it->instExecuteCycle <= cc_buffer_clock && it->instInFU == true) {
-            // Print the instruction being moved to execute
-
             DPRINTF(CC_Buffer_Flag, "---------Finished executing instruction: %s---------\n", it->getStaticInst()->getName());
             DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
-            // DPRINTF(CC_Buffer_Flag, "New FUs free: %lu\n", num_functional_units_free + 1);
             DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
-            DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits());
-            DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_credits.getCredits() + 1);
 
-            // Release the functional unit
-            functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
+            if (!it->execVerify_bit) {
+                it->execVerify_bit = true;
+                DPRINTF(CC_Buffer_Flag, "Marking instruction as functionally verified and freeing functional unit %d\n", it->functional_unit_index);
+                functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
+            }
 
-            // set instruction as functionally verified
-            it->execVerify_bit = true;
-
-            // calculate expression to check if instruction is fully verified and can be dropped/sent to mem
             bool inst_verified = it->execVerify_bit && it->iVerify_bit;
 
             if (inst_verified) {
-                // Remove the instruction from the buffer
-                it = execute_buffer.erase(it);
+                DPRINTF(CC_Buffer_Flag, "Instruction verified: %s\n", it->getStaticInst()->getName());
 
-                // execute_buffer_current_credits++;
-                execute_buffer_credits.addCredit();
-            } else {
-                // if instruction is not verified
-                DPRINTF(CC_Buffer_Flag, "Instruction %s could not be removed, not fully verified\n", it->getStaticInst()->getName());
-
-                // if not verified we also want to return to ensure no newer instructions can be removed from the buffer
-                return;
-            }
-
-        } else { // case 2: inst has not been sent to the FUs yet and has not started executing
-
-            // get if an FU is available to execute this instruction
-            int free_FU_idx = functional_unit_pool->getUnit(it->getStaticInst()->opClass());
-
-            if (free_FU_idx >= 0) { // if there is a free functional unit
-                //inst is now in fu
-                it->instInFU = true;
-                //inst execution cycle is current clock + operation's latency
-                it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
-                //assign which functional unit used to execute
-                it->functional_unit_index = free_FU_idx;
-                
-                //go to next item in buffer since more FUs could be free
-                ++it;
-
-            } else if (free_FU_idx == -1) { //if no functional units are free
-                DPRINTF(CC_Buffer_Flag, "All functional units full, cannot send inst to any more functional units, stalling inst: %s\n", it->getStaticInst()->getName());
-                return;
-
-            } else { //equivalent to fuCase == -2, if no functional units have the correct capability
-
-                if (it->getStaticInst()->getName() == "fault") {
-                    // DPRINTF(CC_Buffer_Flag, "Fault inst, going to default 4 cycle latency, no functional units capable of executing this instruction: %s\n", it->getStaticInst()->getName());
-
-                    // if the instruction is of a fault type, remove it because it's not a valid instruction
-                    // Remove the instruction from the buffer
+                if (!checker_regfile.isBandwidthFull()) {
+                    DPRINTF(CC_Buffer_Flag, "Staging instruction to regfile, not full yet.\n");
                     it = execute_buffer.erase(it);
-
-                    // execute_buffer_current_credits++;
+                    checker_regfile.stageInstToRegfile();
                     execute_buffer_credits.addCredit();
                 } else {
-                    DPRINTF(CC_Buffer_Flag, "!!! CRITICAL ERROR !!! No functional units capable of executing this instruction: %s\n", it->getStaticInst()->getName());
+                    DPRINTF(CC_Buffer_Flag, "Bandwidth full, instruction cannot be staged.\n");
+                    ++it;  // Ensure iterator is advanced to prevent re-processing
+                    return;
+                }
+
+            } else {
+                DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s\n", it->getStaticInst()->getName());
+                return;  // If not verified, exit early and recheck in the next cycle
+            }
+
+        } else {
+            int free_FU_idx = functional_unit_pool->getUnit(it->getStaticInst()->opClass());
+            if (free_FU_idx >= 0) {
+                it->instInFU = true;
+                it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
+                it->functional_unit_index = free_FU_idx;
+                DPRINTF(CC_Buffer_Flag, "Assigned functional unit %d to instruction %s\n", free_FU_idx, it->getStaticInst()->getName());
+                ++it;
+
+            } else if (free_FU_idx == -1) {
+                DPRINTF(CC_Buffer_Flag, "No functional units free for instruction: %s\n", it->getStaticInst()->getName());
+                return;
+
+            } else {
+                if (it->getStaticInst()->getName() == "fault") {
+                    it = execute_buffer.erase(it);
+                    execute_buffer_credits.addCredit();
+                } else {
+                    DPRINTF(CC_Buffer_Flag, "No FUs capable of executing instruction: %s\n", it->getStaticInst()->getName());
                     return;
                 }
             }
-            
         }
     }
 }
+
 
 
 /*
@@ -373,6 +356,11 @@ void CC_Buffer::regStats()
 
     ooo_stall_signals
         .name(name() + ".ooo_stall_signals")
+        .desc("Number of cycles stalled due to buffer")
+        .flags(statistics::total);
+
+    regfile_insts_processed
+        .name(name() + ".regfile_insts_processed")
         .desc("Number of cycles stalled due to buffer")
         .flags(statistics::total);
 

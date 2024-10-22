@@ -20,6 +20,8 @@
 
 #include "cpu/o3/fu_pool.hh" // accessing FUPool
 
+#include "checker_chip/cc_regfile.hh" // for custom regfile
+
 #include "base/statistics.hh" //for custom stats
 
 namespace gem5
@@ -73,6 +75,10 @@ class CC_Buffer : public ClockedObject
     //define functional_unit_pool here
     gem5::o3::FUPool *functional_unit_pool;  // Pointer to functional unit pool instance, from CC_Buffer.py
 
+    // custom regfile
+
+    CheckerRegfile checker_regfile;
+
     // testing/debug
     unsigned long instCount;
     std::unordered_map<std::string, int> debugStringMap;
@@ -105,6 +111,9 @@ class CC_Buffer : public ClockedObject
     statistics::Scalar cc_buffer_cycles;
     statistics::Scalar ooo_stall_signals;
     void addStallCycle();
+
+
+    statistics::Scalar regfile_insts_processed;
 
     // statistics::Scalar decode_buffer_occupancy_total;
     // statistics::Formula decode_buffer_occupancy_avg;
