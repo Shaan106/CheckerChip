@@ -17,8 +17,9 @@ private:
 public:
 
     // cycle counters to see when the instructions can be executed.
-    int instDecodeCycle;
-    int instExecuteCycle;
+    unsigned long instDecodeCycle;
+    unsigned long instExecuteCycle;
+    unsigned long instTranslationCycle;
 
     //bool to check whether inst has been assigned a functional unit
     bool instInFU;
@@ -33,8 +34,9 @@ public:
     int functional_unit_index; 
 
     // Constructor
-    CheckerInst(int instDecodeCycle,
-                int instExecuteCycle,
+    CheckerInst(unsigned long instDecodeCycle,
+                unsigned long instExecuteCycle,
+                unsigned long instTranslationCycle,
                 bool instInFU,
                 const gem5::StaticInstPtr &staticInst);
 

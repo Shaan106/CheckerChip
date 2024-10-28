@@ -24,6 +24,8 @@
 
 #include "base/statistics.hh" //for custom stats
 
+#include "checker_chip/cc_tlb.hh"
+
 namespace gem5
 {
 
@@ -82,6 +84,9 @@ class CC_Buffer : public ClockedObject
     // testing/debug
     unsigned long instCount;
     std::unordered_map<std::string, int> debugStringMap;
+
+    // TLB instance
+    CheckerTLB tlb;
 
   public:
     CC_Buffer(const CC_BufferParams &p);

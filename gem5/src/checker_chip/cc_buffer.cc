@@ -59,6 +59,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
             4 //bandwidth
       ), //Checker regfile
 
+      tlb(params.tlbEntries, params.tlbAssociativity, params.tlbHitLatency, params.tlbMissLatency),
+
       instCount(0),
       debugStringMap({})
 {
@@ -324,16 +326,21 @@ CheckerInst
 CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 {
     unsigned long clockPeriodTicks = clockPeriod(); //clock period in ticks, random thing to try put in data struct
-    // int inst_execute_latency = getOperationLatency(instName->staticInst->opClass());
-    // DPRINTF(CC_Buffer_Flag, "\nCurrent cycle: %d, \nCurrent cc_buffer_clock + inst_execute_latency: %d\n", cc_buffer_clock, cc_buffer_clock + inst_execute_latency);
-    // DPRINTF(CC_Buffer_Flag, "\nCurrent cycle: %d, \nCurrent cc_buffer_clock + inst_execute_latency: %d\n", cc_buffer_clock, cc_buffer_clock + execute_buffer_latency);
+    
+    Addr inst_addr = instName->pcState().instAddr();
+    unsigned int tlb_latency = tlb.translate(inst_addr);
+
+    // DPRINTF(CC_Buffer_Flag, "!!!!!!!!!!!!TLB LATENCY !!!!!!!!!!!!!!!!!! : %d\n", tlb_latency);
 
     // Create a CheckerInst object with credits as the parameter
     CheckerInst checkerInst(cc_buffer_clock + decode_buffer_latency, //instDecodeCycle = currentCycle + decode_buffer_latency (5)
-                            0, //instExecuteCycle = cc_buffer_clock + inst_execute_latency
+                            0, //instExecuteCycle is initially 0
+                            cc_buffer_clock + tlb_latency, //instTranslationCycle, when the inst is translated
                             false, // instInFU
                             instName->staticInst // staticInst passed in (contains info about the instruction)
                             );
+
+    DPRINTF(CC_Buffer_Flag, "!!!!!!!!!!!!TLB LATENCY !!!!!!!!!!!!!!!!!! : %lu\n", checkerInst.instTranslationCycle);
 
     // Return the created CheckerInst object
     return checkerInst;

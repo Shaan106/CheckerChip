@@ -4,12 +4,14 @@
 // #include "cpu/static_inst.hh"
 
 // Constructor
-CheckerInst::CheckerInst(int instDecodeCycle,
-                         int instExecuteCycle,
+CheckerInst::CheckerInst(unsigned long instDecodeCycle,
+                         unsigned long instExecuteCycle,
+                         unsigned long instTranslationCycle,
                          bool instInFU,
                         const gem5::StaticInstPtr &staticInst)
     : instDecodeCycle(instDecodeCycle),
       instExecuteCycle(instExecuteCycle),
+      instTranslationCycle(instTranslationCycle),
       instInFU(instInFU),
       iVerify_bit(false),
       execVerify_bit(false),

@@ -10,6 +10,7 @@ Source('cc_buffer.cc')
 Source('cc_inst.cc')
 Source('cc_creditSystem.cc')
 Source('cc_regfile.cc')
+Source('cc_tlb.cc')
 
 # debug flag specifically for our custom sim object
 DebugFlag('CC_Buffer_Flag') 
