@@ -18,8 +18,6 @@ from gem5.simulate.simulator import Simulator
 from gem5.isas import ISA
 
 # no cache
-
-
 # cache_hierarchy = PrivateL1SharedL2CacheHierarchy(
 cache_hierarchy = CheckerCacheHierarchy(
     l1d_size="32kB", 
@@ -40,7 +38,8 @@ board = SimpleBoard(clk_freq="3GHz",
 
 # loading the binary for running hello-world
 
-binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/SAXPY/saxpy_static")
+# binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/SAXPY/saxpy_static")
+binary = Resource("x86-hello64-static")
 
 #setting workload to current board (we are going to run in SE mode)
 board.set_se_binary_workload(binary)
