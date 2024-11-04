@@ -107,7 +107,7 @@ PySource('gem5.components.cachehierarchies.classic.caches',
 
 #cc_buffer cache component
 PySource('gem5.components.cachehierarchies.classic.caches',
-    'gem5/components/cachehierarchies/classic/caches/cc_simple_cache.py')
+    'gem5/components/cachehierarchies/classic/caches/cc_banked_cache.py')
 
 PySource('gem5.components.cachehierarchies.classic.caches',
     'gem5/components/cachehierarchies/classic/caches/l1icache.py')

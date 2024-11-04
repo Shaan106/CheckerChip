@@ -27,9 +27,16 @@
 
 Import('*')
 
+# Include the SimObject definition for BankedCache
+SimObject('CC_BankedCache.py', sim_objects=['CC_BankedCache'])
 
-SimObject('CC_SimpleCache.py', sim_objects=['CC_SimpleCache'])
+# Include the SimObject definition for CC_SimpleCache (existing)
+# SimObject('CC_SimpleCache.py', sim_objects=['CC_SimpleCache'])
 
-Source('cc_simple_cache.cc')
+# Add the source files for both caches
+Source('cc_banked_cache.cc')
+# Source('cc_simple_cache.cc')
 
-DebugFlag('CC_SimpleCache', "For checker cache.")
+# Add debug flags for both caches
+DebugFlag('CC_BankedCache', "For banked cache.")
+# DebugFlag('CC_SimpleCache', "For checker cache.")

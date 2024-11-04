@@ -28,7 +28,7 @@ from m5.objects import (
     BadAddr,
     BaseXBar,
     Cache,
-    CC_SimpleCache,
+    CC_BankedCache,
     L2XBar,
     Port,
     SystemXBar,
@@ -45,7 +45,7 @@ from .caches.l1icache import L1ICache
 from .caches.l2cache import L2Cache
 from .caches.mmu_cache import MMUCache
 
-from .caches.cc_simple_cache import CC_CacheInstance
+from .caches.cc_banked_cache import CC_CacheInstance
 
 
 class CheckerCacheHierarchy(
