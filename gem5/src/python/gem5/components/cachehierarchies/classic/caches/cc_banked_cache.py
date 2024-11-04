@@ -28,6 +28,8 @@ class CC_CacheInstance(CC_BankedCache):
         writeback_clean: bool = False,
         clusivity: Clusivity = "mostly_incl",
         PrefetcherCls: Type[BasePrefetcher] = StridePrefetcher,
+
+        num_banks: int = 4, #custom added
     ):
         super().__init__()
         self.size = size
@@ -40,3 +42,5 @@ class CC_CacheInstance(CC_BankedCache):
         self.writeback_clean = writeback_clean
         self.clusivity = clusivity
         self.prefetcher = PrefetcherCls()
+
+        self.num_banks = num_banks

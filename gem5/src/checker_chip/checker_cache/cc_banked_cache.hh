@@ -19,7 +19,15 @@ class CC_BankedCache : public Cache
     ~CC_BankedCache() = default;
 
   protected:
-    // For now, we don't override any methods
+    // Number of banks
+    unsigned numBanks;
+
+    // Bank selection function
+    unsigned calculateBankId(Addr addr) const;
+
+    // Override the access() method
+    bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
+                PacketList &writebacks) override;
 };
 
 } // namespace gem5
