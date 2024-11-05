@@ -121,7 +121,8 @@ class CC_BankedCache : public Cache
         void recvRespRetry() override;
     };
 
-    CC_CPUSidePort cc_cpu_port;
+    // CC_CPUSidePort cc_cpu_port;
+    std::vector<CC_CPUSidePort> cc_cpu_port;
 };
 
 } // namespace gem5

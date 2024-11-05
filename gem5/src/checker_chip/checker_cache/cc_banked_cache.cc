@@ -10,10 +10,16 @@ namespace gem5
 
 CC_BankedCache::CC_BankedCache(const CC_BankedCacheParams &p)
     : Cache(p),
-      numBanks(p.num_banks),
-      cc_cpu_port(name() + ".cc_cpu_port", /*id*/ 0, this)
+      numBanks(p.num_banks)//,
+    //   cc_cpu_port(name() + ".cc_cpu_port", /*id*/ 0, this)
 {
-    // No additional initialization needed for now
+    // Since the CPU side ports are a vector of ports, create an instance of
+    // the CPUSidePort for each connection. This member of params is
+    // automatically created depending on the name of the vector port and
+    // holds the number of connections to this port name
+    for (int i = 0; i < 8; ++i) {
+        cc_cpu_port.emplace_back(name() + csprintf(".cc_cpu_port[%d]", i), i, this);
+    }
 }
 
 unsigned
@@ -39,8 +45,8 @@ CC_BankedCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 Port &
 CC_BankedCache::getPort(const std::string &if_name, PortID idx)
 {
-    if (if_name == "cc_cpu_port") {
-        return cc_cpu_port;
+    if (if_name == "cc_cpu_port" && idx < cc_cpu_port.size()) {
+        return cc_cpu_port[idx];
     } else {
         // If the port name doesn't match, defer to the base class
         return Cache::getPort(if_name, idx);

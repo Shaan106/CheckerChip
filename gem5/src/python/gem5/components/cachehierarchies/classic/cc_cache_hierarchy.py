@@ -153,6 +153,13 @@ class CheckerCacheHierarchy(
         # self.l2cache = L2Cache(size=self._l2_size, assoc=self._l2_assoc)
 
         self.cc_l2cache = CC_CacheInstance(size=self._l2_size)
+        # Ensure L2 cache has the correct address range from the board
+        # self.cc_l2cache.addr_ranges = board.mem_ranges
+
+        # Create a new bus for cc_buffer connections
+        # self.cc_buffer_bus = SystemXBar()
+        # self.cc_buffer_bus.default = self.cc_l2cache.cpu_side
+        # self.cc_buffer_bus.addr_ranges = self.cc_l2cache.addr_ranges
 
 
         # ITLB Page walk caches
@@ -198,9 +205,15 @@ class CheckerCacheHierarchy(
                 cpu.connect_interrupt()
 
             # checker chip specifics:
-            if (i==0):
-                cpu.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
-                # cpu.core.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
+            # Connect each cc_buffer's memory-side port to the cc_buffer_bus
+            # cpu.core.cc_buffer.cc_mem_side_port = self.cc_buffer_bus.cpu_side_ports
+            # if (i==0):
+            cpu.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
+            # cpu - CC_proc, cpu.core - cc_core, cpu.core.core - base03cpu
+            # cpu.core.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
+
+        # # Connect the cc_buffer_bus memory-side port to cc_l2cache's CPU port
+        # self.cc_buffer_bus.mem_side_ports = self.cc_l2cache.cc_cpu_port
 
         #L2Bus-L2
         # self.l2bus.mem_side_ports = self.l2cache.cpu_side

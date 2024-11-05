@@ -12,4 +12,6 @@ class CC_BankedCache(Cache):
     num_banks = Param.Int(4, "Number of banks in the cache")
 
     # Corrected port name and type
-    cc_cpu_port = ResponsePort("CC CPU port") #used SlavePort in documentation always?
+    cc_cpu_port = VectorResponsePort("CC CPU port") #used SlavePort in documentation always?
+
+    # cc_cpu_port = VectorResponsePort("CC CPU side port, receives requests")
