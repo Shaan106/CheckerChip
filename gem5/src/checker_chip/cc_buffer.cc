@@ -62,7 +62,10 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       tlb(params.tlbEntries, params.tlbAssociativity, params.tlbHitLatency, params.tlbMissLatency),
 
       instCount(0),
-      debugStringMap({})
+      debugStringMap({}),
+      cc_mem_side_port(name() + ".cc_mem_side_port", this), // for ports
+      system(params.system), // Initialize the system pointer
+      requestorId(1000)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
@@ -74,6 +77,19 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
     // Schedule the buffer clock event to trigger after the initial period
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
+}
+
+// Override the init() method
+void
+CC_Buffer::init()
+{
+    // Call the base class init()
+    ClockedObject::init();
+
+    // Obtain the RequestorID
+    requestorId = system->getRequestorId(this);
+
+    // You can add any additional initialization here
 }
 
 /*
@@ -115,6 +131,9 @@ void CC_Buffer::processBufferClockEvent()
     //DEBUG for buffer clocks
     if (cc_buffer_clock % 100 == 0) {
         DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
+
+        sendDummyPacket();
+
         for (const auto& pair : debugStringMap) {
             DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
         }
@@ -404,5 +423,99 @@ void CC_Buffer::regStats()
     // initially = 0
     // decode_buffer_occupancy_maximum = 0;
 }
+
+void
+CC_Buffer::sendDummyPacket()
+{
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
+
+    // Create a dummy request
+    Addr addr = 0x0; // Dummy address
+    unsigned size = 64; // Size of the data in bytes
+
+    RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
+
+    // Create a packet with the request
+    PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+
+    // Allocate space for data (even for ReadReq, to store read data)
+    pkt->allocate();
+
+    // Optionally, initialize data (for write requests)
+    // For ReadReq, this is not necessary
+
+    // Send the packet through the memory-side port
+    cc_mem_side_port.sendPacket(pkt);
+}
+
+Port &
+CC_Buffer::getPort(const std::string &if_name, PortID idx)
+{
+    if (if_name == "cc_mem_side_port") {
+        return cc_mem_side_port;
+    } else {
+        return SimObject::getPort(if_name, idx);
+    }
+}
+
+//////////////
+//
+// CC_MemSidePort Implementation
+//
+//////////////
+
+void
+CC_Buffer::CC_MemSidePort::sendPacket(PacketPtr pkt)
+{
+    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Sending packet: %s\n", pkt->print());
+
+    // Send the packet
+    if (!sendTimingReq(pkt)) {
+        // If unable to send, store the packet and wait for retry
+        blockedPacket = pkt;
+        DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet blocked, waiting for retry.\n");
+    } else {
+        DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet sent successfully.\n");
+    }
+}
+
+bool
+CC_Buffer::CC_MemSidePort::recvTimingResp(PacketPtr pkt)
+{
+    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received timing response: %s\n", pkt->print());
+
+    // Process the response as needed
+    // For now, we'll just delete the packet
+    delete pkt;
+
+    return true;
+}
+
+void
+CC_Buffer::CC_MemSidePort::recvReqRetry()
+{
+    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received request retry.\n");
+
+    if (blockedPacket) {
+        PacketPtr pkt = blockedPacket;
+        blockedPacket = nullptr;
+
+        if (!sendTimingReq(pkt)) {
+            // If still blocked, keep the packet
+            blockedPacket = pkt;
+            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Retry failed, still blocked.\n");
+        } else {
+            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Retry successful, packet sent.\n");
+        }
+    }
+}
+
+void
+CC_Buffer::CC_MemSidePort::recvRangeChange()
+{
+    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received range change.\n");
+    // For simplicity, we ignore range changes
+}
+
 
 } // namespace gem5

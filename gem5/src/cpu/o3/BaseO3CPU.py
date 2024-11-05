@@ -202,3 +202,6 @@ class BaseO3CPU(BaseCPU):
         CC_Buffer(maxCredits=64),
         "A CC_Buffer object, with a different clock domain"
     )
+
+    #port definition to go to banked cache?
+    #

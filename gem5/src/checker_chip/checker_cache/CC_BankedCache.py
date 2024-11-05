@@ -10,3 +10,6 @@ class CC_BankedCache(Cache):
     cxx_class = "gem5::CC_BankedCache"
 
     num_banks = Param.Int(4, "Number of banks in the cache")
+
+    # Corrected port name and type
+    cc_cpu_port = ResponsePort("CC CPU port") #used SlavePort in documentation always?

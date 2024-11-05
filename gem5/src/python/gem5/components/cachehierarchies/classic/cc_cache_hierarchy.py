@@ -197,12 +197,19 @@ class CheckerCacheHierarchy(
             else:
                 cpu.connect_interrupt()
 
+            # checker chip specifics:
+            if (i==0):
+                cpu.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
+                # cpu.core.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
+
         #L2Bus-L2
         # self.l2bus.mem_side_ports = self.l2cache.cpu_side
         self.l2bus.mem_side_ports = self.cc_l2cache.cpu_side
         #L2-MemBus
         # self.membus.cpu_side_ports = self.l2cache.mem_side
         self.membus.cpu_side_ports = self.cc_l2cache.mem_side
+
+        # about to do something completely crazy:
 
     def _setup_io_cache(self, board: AbstractBoard) -> None:
         """Create a cache for coherent I/O connections"""

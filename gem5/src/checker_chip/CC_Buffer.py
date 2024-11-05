@@ -1,18 +1,24 @@
 from m5.params import *
 from m5.objects.FUPool import *
 from m5.objects.ClockedObject import ClockedObject
+from m5.proxy import *
 
 class CC_Buffer(ClockedObject):
     type = "CC_Buffer"
     cxx_header = "checker_chip/cc_buffer.hh"
     cxx_class = "gem5::CC_Buffer"
 
-    maxCredits = Param.Int(128, "Max Credits. How many items (credits) the buffer can hold")
+    maxCredits = Param.Int(64, "Max Credits. How many items (credits) the buffer can hold")
     checkerFUPool = Param.FUPool(CheckerFUPool(), "Functional Unit pool for cc_buffer")
     tlbEntries = Param.Int(64, "Total number of entries in the TLB")
     tlbAssociativity = Param.Int(4, "Associativity of the TLB")
     tlbHitLatency = Param.Cycles(1, "Latency for TLB hits")
     tlbMissLatency = Param.Cycles(10, "Latency for TLB misses")
+
+    cc_mem_side_port = RequestPort("CC Memory-side port") 
+
+    # Add the system parameter
+    system = Param.System(Parent.any, "System this CC_Buffer belongs to")
 
     '''
     extra notes
