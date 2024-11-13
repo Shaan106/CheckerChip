@@ -23,3 +23,18 @@ CheckerInst::CheckerInst(unsigned long instDecodeCycle,
 gem5::StaticInstPtr CheckerInst::getStaticInst() const {
     return staticInst;
 }
+
+bool CheckerInst::isReadInst() const {
+  gem5::OpClass op_class = staticInst->opClass();
+  return (op_class == gem5::MemReadOp || op_class == gem5::FloatMemReadOp);
+}
+
+bool CheckerInst::isWriteInst() const {
+  gem5::OpClass op_class = staticInst->opClass();
+  return (op_class == gem5::MemWriteOp || op_class == gem5::FloatMemWriteOp);
+}
+
+void CheckerInst::setMemAddresses(gem5::Addr virt_addr, gem5::Addr phys_addr) {
+  v_addr = virt_addr;
+  p_addr = phys_addr;
+}

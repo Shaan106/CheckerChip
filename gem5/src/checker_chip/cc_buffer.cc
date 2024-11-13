@@ -248,14 +248,14 @@ CC_Buffer::updateExecuteBufferContents()
                 it->functional_unit_index = free_FU_idx;
                 DPRINTF(CC_Buffer_Flag, "Assigned functional unit %d to instruction %s\n", free_FU_idx, it->getStaticInst()->getName());
 
-                OpClass op_class = it->getStaticInst()->opClass();
+                // OpClass op_class = it->getStaticInst()->opClass();
 
-                if (op_class == MemReadOp || op_class == FloatMemReadOp) {
+                if (it->isReadInst()) {
                     DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket.\n");
-                    sendReadReqPacket();
-                } else if (op_class == MemWriteOp || op_class == FloatMemWriteOp) {
+                    sendReadReqPacket(*it);
+                } else if (it->isWriteInst()) {
                     DPRINTF(CC_Buffer_Flag, "A memorywrite operation, sending MemReadPacket.\n");
-                    sendWriteReqPacket();
+                    sendWriteReqPacket(*it);
                 } else {
                     DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
                 }
@@ -375,6 +375,10 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
 
     DPRINTF(CC_Buffer_Flag, "!!!!!!!!!!!!TLB LATENCY !!!!!!!!!!!!!!!!!! : %lu\n", checkerInst.instTranslationCycle);
 
+    if (instName->isMemRef()) {
+        checkerInst.setMemAddresses(instName->effAddr, instName->physEffAddr);
+        DPRINTF(CC_Buffer_Flag, "inst: %s, v_addr: 0x%x, p_addr = 0x%x\n", checkerInst.getStaticInst()->getName(), checkerInst.v_addr, checkerInst.p_addr);
+    }
     // Return the created CheckerInst object
     return checkerInst;
 }
@@ -439,12 +443,12 @@ void CC_Buffer::regStats()
 }
 
 void
-CC_Buffer::sendReadReqPacket()
+CC_Buffer::sendReadReqPacket(CheckerInst memInst)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
 
     // Create a dummy request
-    Addr addr = 0x1; // Dummy address
+    Addr addr = memInst.p_addr; // Dummy address
     unsigned size = 64; // Size of the data in bytes
 
     RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
@@ -463,12 +467,12 @@ CC_Buffer::sendReadReqPacket()
 }
 
 void
-CC_Buffer::sendWriteReqPacket()
+CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a write request packet.\n");
 
     // Define a dummy address and size for the write request
-    Addr addr = 0x2;       // Dummy address
+    Addr addr = memInst.p_addr;       // Dummy address
     unsigned size = 64;    // Size of the data in bytes
 
     // Create a dummy request with the given address and size

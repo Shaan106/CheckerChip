@@ -175,12 +175,14 @@ class CC_Buffer : public ClockedObject
     /**
      * Method to create and send a readReq packet through cc_mem_side_port.
      */
-    void sendReadReqPacket();
+    // void sendReadReqPacket(CheckerInst memInst);
+    void sendReadReqPacket(CheckerInst memInst);
 
     /**
      * Method to create and send a readWrite packet through cc_mem_side_port.
      */
-    void sendWriteReqPacket();
+    // void sendWriteReqPacket(CheckerInst memInst);
+    void sendWriteReqPacket(CheckerInst memInst);
 
     /**
      * Called by an outside object. Starts off the events to fill the buffer

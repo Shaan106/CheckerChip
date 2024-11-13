@@ -7,6 +7,10 @@
 
 #include "cpu/static_inst.hh"
 
+#include "base/types.hh"
+
+#include "cpu/op_class.hh"
+
 class CheckerInst {
 private:
     // Private member variables
@@ -20,6 +24,10 @@ public:
     unsigned long instDecodeCycle;
     unsigned long instExecuteCycle;
     unsigned long instTranslationCycle;
+
+    //storing v_addr and p_addr if inst is a ld/st
+    gem5::Addr v_addr;
+    gem5::Addr p_addr;
 
     //bool to check whether inst has been assigned a functional unit
     bool instInFU;
@@ -42,6 +50,15 @@ public:
 
     // Getter for staticInst
     gem5::StaticInstPtr getStaticInst() const;
+
+    // return true if load inst
+    bool isReadInst() const;
+
+    // return true if store inst
+    bool isWriteInst() const;
+
+    // function to set v_addr and p_addr if inst is mem_inst
+    void setMemAddresses(gem5::Addr virt_addr, gem5::Addr phys_addr);
 };
 
 #endif // cc_inst_HH
