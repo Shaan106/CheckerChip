@@ -38,7 +38,7 @@ from ....isas import ISA
 from ....utils.override import *
 from ...boards.abstract_board import AbstractBoard
 from ..abstract_cache_hierarchy import AbstractCacheHierarchy
-from ..abstract_three_level_cache_hierarchy import AbstractThreeLevelCacheHierarchy
+from ..abstract_two_level_cache_hierarchy import AbstractTwoLevelCacheHierarchy
 from .abstract_classic_cache_hierarchy import AbstractClassicCacheHierarchy
 from .caches.l1dcache import L1DCache
 from .caches.l1icache import L1ICache
@@ -49,7 +49,7 @@ from .caches.cc_banked_cache import CC_CacheInstance
 
 
 class CheckerCacheHierarchy(
-    AbstractClassicCacheHierarchy, AbstractThreeLevelCacheHierarchy
+    AbstractClassicCacheHierarchy, AbstractTwoLevelCacheHierarchy
 ):
     """
     A cache setup where each core has a private L1 Data and Instruction Cache,
@@ -79,12 +79,9 @@ class CheckerCacheHierarchy(
         l1d_size: str,
         l1i_size: str,
         l2_size: str,
-        l3_size: str, # new
-
         l1d_assoc: int = 8,
         l1i_assoc: int = 8,
         l2_assoc: int = 16,
-        l3_assoc: int = 16, # new
         membus: BaseXBar = _get_default_membus.__func__(),
     ) -> None:
         """
@@ -99,7 +96,7 @@ class CheckerCacheHierarchy(
         """
 
         AbstractClassicCacheHierarchy.__init__(self=self)
-        AbstractThreeLevelCacheHierarchy.__init__(
+        AbstractTwoLevelCacheHierarchy.__init__(
             self,
             l1i_size=l1i_size,
             l1i_assoc=l1i_assoc,
@@ -107,8 +104,6 @@ class CheckerCacheHierarchy(
             l1d_assoc=l1d_assoc,
             l2_size=l2_size,
             l2_assoc=l2_assoc,
-            l3_size=l3_size, # new
-            l3_assoc=l3_assoc # new
         )
 
         self.membus = membus
@@ -153,12 +148,11 @@ class CheckerCacheHierarchy(
         #look at src/mem/XBar.py to see different types of buses and how they are used.
         #may need to make another for L2-L3 etc latencies important for checker cache travel time.
         self.l2bus = L2XBar()
-        self.l3bus = L2XBar()
 
         # defining shared l2
-        self.l2cache = L2Cache(size=self._l2_size, assoc=self._l2_assoc)
+        # self.l2cache = L2Cache(size=self._l2_size, assoc=self._l2_assoc)
 
-        self.cc_l3cache = CC_CacheInstance(size=self._l3_size)
+        self.cc_l2cache = CC_CacheInstance(size=self._l2_size)
         # Ensure L2 cache has the correct address range from the board
         # self.cc_l2cache.addr_ranges = board.mem_ranges
 
@@ -214,7 +208,7 @@ class CheckerCacheHierarchy(
             # Connect each cc_buffer's memory-side port to the cc_buffer_bus
             # cpu.core.cc_buffer.cc_mem_side_port = self.cc_buffer_bus.cpu_side_ports
             # if (i==0):
-            cpu.core.cc_buffer.cc_mem_side_port = self.cc_l3cache.cc_cpu_port
+            cpu.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
             # cpu - CC_proc, cpu.core - cc_core, cpu.core.core - base03cpu
             # cpu.core.core.cc_buffer.cc_mem_side_port = self.cc_l2cache.cc_cpu_port
 
@@ -222,18 +216,11 @@ class CheckerCacheHierarchy(
         # self.cc_buffer_bus.mem_side_ports = self.cc_l2cache.cc_cpu_port
 
         #L2Bus-L2
-        # self.l2bus.mem_side_ports = self.cc_l2cache.cpu_side
-        self.l2bus.mem_side_ports = self.l2cache.cpu_side
-
-        #L2-L3Bus
-        self.l3bus.cpu_side_ports = self.l2cache.mem_side
-
-        #L3Bus-L3
-        self.l3bus.mem_side_ports = self.cc_l3cache.cpu_side
-
-        #L3-MemBus
+        # self.l2bus.mem_side_ports = self.l2cache.cpu_side
+        self.l2bus.mem_side_ports = self.cc_l2cache.cpu_side
+        #L2-MemBus
         # self.membus.cpu_side_ports = self.l2cache.mem_side
-        self.membus.cpu_side_ports = self.cc_l3cache.mem_side
+        self.membus.cpu_side_ports = self.cc_l2cache.mem_side
 
         # about to do something completely crazy:
 
