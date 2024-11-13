@@ -141,3 +141,21 @@ class RdWrPort(FUDesc):
 class IprPort(FUDesc):
     opList = [OpDesc(opClass="IprAccess", opLat=3, pipelined=False)]
     count = 1
+
+class CC_RdWrPort(FUDesc):
+    opList = [
+        OpDesc(opClass="MemRead", opLat = 1),
+        OpDesc(opClass="MemWrite", opLat = 1),
+        OpDesc(opClass="FloatMemRead", opLat = 1),
+        OpDesc(opClass="FloatMemWrite", opLat = 1), # here the opLats represent how long until we can send another req
+    ]
+    count = 1
+
+class CC_ReadPort(FUDesc):
+    opList = [OpDesc(opClass="MemRead"), OpDesc(opClass="FloatMemRead")]
+    count = 1
+
+
+class CC_WritePort(FUDesc):
+    opList = [OpDesc(opClass="MemWrite"), OpDesc(opClass="FloatMemWrite")]
+    count = 1

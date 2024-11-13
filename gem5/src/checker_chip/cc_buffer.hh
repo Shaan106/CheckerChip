@@ -33,6 +33,7 @@
 #include "sim/system.hh"       // Include for System pointer
 #include "mem/request.hh" // For RequestorID and InvalidRequestorId
 
+#include "cpu/op_class.hh"
 
 namespace gem5
 {
@@ -170,6 +171,16 @@ class CC_Buffer : public ClockedObject
      * Method to create and send a dummy packet through cc_mem_side_port.
      */
     void sendDummyPacket();
+
+    /**
+     * Method to create and send a readReq packet through cc_mem_side_port.
+     */
+    void sendReadReqPacket();
+
+    /**
+     * Method to create and send a readWrite packet through cc_mem_side_port.
+     */
+    void sendWriteReqPacket();
 
     /**
      * Called by an outside object. Starts off the events to fill the buffer

@@ -7,21 +7,26 @@ from gem5.resources.resource import Resource
 from gem5.resources.resource import obtain_resource
 from gem5.resources.resource import CustomResource
 from gem5.simulate.simulator import Simulator
-
+from gem5.components.cachehierarchies.classic.cc_cache_hierarchy import CheckerCacheHierarchy
+from gem5.components.processors.cc_processor import CC_Processor
 from gem5.isas import ISA
 
 #essentially you get a "virtual motherboard"
 # and add all your "virtual" components to said board
 
 # no cache
-cache_hierarchy = NoCache()
+cache_hierarchy = CheckerCacheHierarchy(
+    l1d_size="32kB", 
+    l1i_size="32kB", 
+    l2_size="256kB"
+)
 # type of RAM, what size
 memory = SingleChannelDDR3_1600("8GiB")
 
 #processor
 #single core processor, 1 timing CPU processor
 #timing is what type of gem5 simulation (also atomic etc)
-processor = SimpleProcessor(cpu_type=CPUTypes.O3, num_cores=8, isa=ISA.X86)
+processor = CC_Processor(cpu_type=CPUTypes.O3, num_cores=8, isa=ISA.X86)
 # processor = SimpleProcessor(cpu_type=CPUTypes.TIMING, num_cores=1, isa=ISA.X86)
 # ./build/X86/gem5.opt --debug-flags=Commit _checker/v0.1/hello-world.py
 # setting ISA not in tutorial, checked actual files to fix.

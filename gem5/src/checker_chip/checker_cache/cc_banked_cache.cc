@@ -95,6 +95,21 @@ bool
 CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
 {
     DPRINTF(CC_BankedCache, "Received timing request: %s\n", pkt->print());
+    
+    // shows what is printed, right now start and end address.
+    // void
+    // Packet::print(std::ostream &o, const int verbosity,
+    //             const std::string &prefix) const
+    // {
+    //     ccprintf(o, "%s%s [%x:%x]%s%s%s%s%s%s", prefix, cmdString(),
+    //             getAddr(), getAddr() + getSize() - 1,
+    //             req->isSecure() ? " (s)" : "",
+    //             req->isInstFetch() ? " IF" : "",
+    //             req->isUncacheable() ? " UC" : "",
+    //             isExpressSnoop() ? " ES" : "",
+    //             req->isToPOC() ? " PoC" : "",
+    //             req->isToPOU() ? " PoU" : "");
+    // }
 
     // Drop the packet after logging
     delete pkt;

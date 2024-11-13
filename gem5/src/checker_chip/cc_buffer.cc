@@ -132,7 +132,7 @@ void CC_Buffer::processBufferClockEvent()
     if (cc_buffer_clock % 100 == 0) {
         DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
 
-        sendDummyPacket();
+        // sendDummyPacket();
 
         for (const auto& pair : debugStringMap) {
             DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
@@ -241,11 +241,25 @@ CC_Buffer::updateExecuteBufferContents()
 
         } else {
             int free_FU_idx = functional_unit_pool->getUnit(it->getStaticInst()->opClass());
+
             if (free_FU_idx >= 0) {
                 it->instInFU = true;
                 it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
                 it->functional_unit_index = free_FU_idx;
                 DPRINTF(CC_Buffer_Flag, "Assigned functional unit %d to instruction %s\n", free_FU_idx, it->getStaticInst()->getName());
+
+                OpClass op_class = it->getStaticInst()->opClass();
+
+                if (op_class == MemReadOp || op_class == FloatMemReadOp) {
+                    DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket.\n");
+                    sendReadReqPacket();
+                } else if (op_class == MemWriteOp || op_class == FloatMemWriteOp) {
+                    DPRINTF(CC_Buffer_Flag, "A memorywrite operation, sending MemReadPacket.\n");
+                    sendWriteReqPacket();
+                } else {
+                    DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
+                }
+
                 ++it;
 
             } else if (free_FU_idx == -1) {
@@ -425,6 +439,58 @@ void CC_Buffer::regStats()
 }
 
 void
+CC_Buffer::sendReadReqPacket()
+{
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
+
+    // Create a dummy request
+    Addr addr = 0x1; // Dummy address
+    unsigned size = 64; // Size of the data in bytes
+
+    RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
+
+    // Create a packet with the request
+    PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+
+    // Allocate space for data (even for ReadReq, to store read data)
+    pkt->allocate();
+
+    // Optionally, initialize data (for write requests)
+    // For ReadReq, this is not necessary
+
+    // Send the packet through the memory-side port
+    cc_mem_side_port.sendPacket(pkt);
+}
+
+void
+CC_Buffer::sendWriteReqPacket()
+{
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a write request packet.\n");
+
+    // Define a dummy address and size for the write request
+    Addr addr = 0x2;       // Dummy address
+    unsigned size = 64;    // Size of the data in bytes
+
+    // Create a dummy request with the given address and size
+    RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
+
+    // Create a WriteReq packet using the request
+    PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
+
+    // Allocate space for data (required for WriteReq)
+    pkt->allocate();
+
+    // Initialize the data to be written (optional, but necessary for realistic writes)
+    uint8_t *data = pkt->getPtr<uint8_t>();
+    for (unsigned i = 0; i < size; ++i) {
+        data[i] = i & 0xFF;  // Example: Initialize data with a simple pattern
+    }
+
+    // Send the packet through the memory-side port
+    cc_mem_side_port.sendPacket(pkt);
+}
+
+void
 CC_Buffer::sendDummyPacket()
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
@@ -447,6 +513,7 @@ CC_Buffer::sendDummyPacket()
     // Send the packet through the memory-side port
     cc_mem_side_port.sendPacket(pkt);
 }
+
 
 Port &
 CC_Buffer::getPort(const std::string &if_name, PortID idx)
