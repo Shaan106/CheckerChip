@@ -28,6 +28,8 @@ public:
     //storing v_addr and p_addr if inst is a ld/st
     gem5::Addr v_addr;
     gem5::Addr p_addr;
+    unsigned mem_access_data_size;
+    uint8_t* mem_access_data_ptr;
 
     //bool to check whether inst has been assigned a functional unit
     bool instInFU;
@@ -58,7 +60,10 @@ public:
     bool isWriteInst() const;
 
     // function to set v_addr and p_addr if inst is mem_inst
-    void setMemAddresses(gem5::Addr virt_addr, gem5::Addr phys_addr);
+    void setMemAddresses(gem5::Addr virt_addr, 
+                         gem5::Addr phys_addr,
+                         unsigned mem_data_size,
+                         uint8_t* mem_data_pointer);
 };
 
 #endif // cc_inst_HH

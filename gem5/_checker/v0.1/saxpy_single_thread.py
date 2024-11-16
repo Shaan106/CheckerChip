@@ -23,7 +23,8 @@ from gem5.isas import ISA
 cache_hierarchy = CheckerCacheHierarchy(
     l1d_size="32kB", 
     l1i_size="32kB", 
-    l2_size="256kB"
+    l2_size="256kB",
+    l3_size="512kB",
 )
 
 # type of RAM, what size
@@ -39,7 +40,7 @@ board = SimpleBoard(clk_freq="3GHz",
 
 # loading the binary for running hello-world
 
-binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/SAXPY/saxpy_static")
+binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/SAXPY/saxpy_single_thread_static")
 # binary = Resource("x86-hello64-static")
 
 #setting workload to current board (we are going to run in SE mode)

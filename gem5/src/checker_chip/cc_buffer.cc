@@ -254,7 +254,7 @@ CC_Buffer::updateExecuteBufferContents()
                     DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket.\n");
                     sendReadReqPacket(*it);
                 } else if (it->isWriteInst()) {
-                    DPRINTF(CC_Buffer_Flag, "A memorywrite operation, sending MemReadPacket.\n");
+                    DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemReadPacket.\n");
                     sendWriteReqPacket(*it);
                 } else {
                     DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
@@ -376,8 +376,35 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
     DPRINTF(CC_Buffer_Flag, "!!!!!!!!!!!!TLB LATENCY !!!!!!!!!!!!!!!!!! : %lu\n", checkerInst.instTranslationCycle);
 
     if (instName->isMemRef()) {
-        checkerInst.setMemAddresses(instName->effAddr, instName->physEffAddr);
+
+    //         /** The size of the request */
+    // unsigned effSize;
+
+    // /** Pointer to the data for the memory access. */
+    // uint8_t *memData = nullptr;
+        if (instName->isStore()) {
+            checkerInst.setMemAddresses(instName->effAddr, 
+                            instName->physEffAddr,
+                            instName->getStoreDataSize(),
+                            instName->getStoreData());
+        } else {
+            checkerInst.setMemAddresses(instName->effAddr, 
+                            instName->physEffAddr,
+                            instName->effSize,
+                            instName->memData);
+        }
+
+
         DPRINTF(CC_Buffer_Flag, "inst: %s, v_addr: 0x%x, p_addr = 0x%x\n", checkerInst.getStaticInst()->getName(), checkerInst.v_addr, checkerInst.p_addr);
+        DPRINTF(CC_Buffer_Flag, "mem_data_size: %d, mem_data: \n", checkerInst.mem_access_data_size);
+        for (unsigned i = 0; i < checkerInst.mem_access_data_size; ++i) {
+            if (checkerInst.mem_access_data_ptr == nullptr) {
+                DPRINTF(CC_Buffer_Flag, "Error: mem_data_ptr is null.\n");
+            } else {
+                DPRINTF(CC_Buffer_Flag, "0x%x \n", checkerInst.mem_access_data_ptr[i]);
+            }
+        }
+        DPRINTF(CC_Buffer_Flag, "\n");
     }
     // Return the created CheckerInst object
     return checkerInst;

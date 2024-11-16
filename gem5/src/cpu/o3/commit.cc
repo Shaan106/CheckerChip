@@ -1262,7 +1262,23 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     // cc_buffer->pushCommit(head_inst->staticInst);
     cc_buffer->pushCommit(head_inst);
 
-    //DO IT HERE TAG
+    // Check if the instruction is a store and print the stored data
+    // if (head_inst->isStore()) {
+    //     uint8_t *data = head_inst->getStoreData(); // Access the stored data
+    //     unsigned size = head_inst->getStoreDataSize(); // Access the size of the stored data
+
+    //     if (data && size > 0) {
+    //         DPRINTF(CC_Buffer_Flag, "Stored data (size: %u): \n", size);
+    //         for (unsigned i = 0; i < size; ++i) {
+    //             DPRINTF(CC_Buffer_Flag, "%02x \n", data[i]); // Print each byte in hex
+    //         }
+    //         DPRINTF(CC_Buffer_Flag, "\n");
+    //     } else {
+    //         DPRINTF(CC_Buffer_Flag, "No valid data to store.\n");
+    //     }
+    // }
+
+
     updateComInstStats(head_inst);
 
     //TAG 03: This is where the instruction is actually committed

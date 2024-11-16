@@ -434,10 +434,29 @@ DynInst::writeMem(uint8_t *data, unsigned size, Addr addr,
                         const std::vector<bool> &byte_enable)
 {
     assert(byte_enable.size() == size);
+
+    // Allocate memory to store a copy of the data
+    if (storeData) {
+        delete[] storeData; // Free previously allocated memory if necessary
+    }
+    storeData = new uint8_t[size];
+    storeDataSize = size;
+
+    // Copy the data
+    memcpy(storeData, data, size);
+
     return cpu->pushRequest(
         dynamic_cast<DynInstPtr::PtrType>(this),
         /* st */ false, data, size, addr, flags, res, nullptr,
         byte_enable);
+}
+
+uint8_t* DynInst::getStoreData() const {
+    return storeData;
+}
+
+unsigned DynInst::getStoreDataSize() const {
+    return storeDataSize;
 }
 
 Fault

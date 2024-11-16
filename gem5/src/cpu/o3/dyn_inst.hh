@@ -197,6 +197,18 @@ class DynInst : public ExecContext, public RefCounted
     /** The status of this BaseDynInst.  Several bits can be set. */
     std::bitset<NumStatus> status;
 
+  /*
+    ---------------------------- CHECKER CHIP ST DATA VALS ----------------------------
+  */
+
+    uint8_t *storeData = nullptr; // Pointer to the store data.
+    unsigned storeDataSize = 0;   // Size of the store data.
+
+  public:
+
+    uint8_t* getStoreData() const;     // Get the data pointer for a store.
+    unsigned getStoreDataSize() const; // Get the size of the store data.
+
   protected:
     /** The result of the instruction; assumes an instruction can have many
      *  destination registers.
