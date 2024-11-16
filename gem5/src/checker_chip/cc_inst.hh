@@ -50,6 +50,9 @@ public:
                 bool instInFU,
                 const gem5::StaticInstPtr &staticInst);
 
+    // Destructor
+    ~CheckerInst();
+
     // Getter for staticInst
     gem5::StaticInstPtr getStaticInst() const;
 

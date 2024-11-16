@@ -253,9 +253,11 @@ CC_Buffer::updateExecuteBufferContents()
                 if (it->isReadInst()) {
                     DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket.\n");
                     sendReadReqPacket(*it);
+                    // sendDummyPacket();
                 } else if (it->isWriteInst()) {
                     DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemReadPacket.\n");
                     sendWriteReqPacket(*it);
+                    // sendDummyPacket();
                 } else {
                     DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
                 }
@@ -476,7 +478,7 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
 
     // Create a dummy request
     Addr addr = memInst.p_addr; // Dummy address
-    unsigned size = 64; // Size of the data in bytes
+    unsigned size = memInst.mem_access_data_size; // Size of the data in bytes
 
     RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
 
@@ -500,7 +502,7 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
 
     // Define a dummy address and size for the write request
     Addr addr = memInst.p_addr;       // Dummy address
-    unsigned size = 64;    // Size of the data in bytes
+    unsigned size = memInst.mem_access_data_size;    // Size of the data in bytes
 
     // Create a dummy request with the given address and size
     RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
@@ -513,9 +515,10 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
 
     // Initialize the data to be written (optional, but necessary for realistic writes)
     uint8_t *data = pkt->getPtr<uint8_t>();
-    for (unsigned i = 0; i < size; ++i) {
-        data[i] = i & 0xFF;  // Example: Initialize data with a simple pattern
-    }
+    // for (unsigned i = 0; i < size; ++i) {
+    //     data[i] = i & 0xFF;  // Example: Initialize data with a simple pattern
+    // }
+    memcpy(data, memInst.mem_access_data_ptr, size);
 
     // Send the packet through the memory-side port
     cc_mem_side_port.sendPacket(pkt);

@@ -111,6 +111,23 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
     //             req->isToPOU() ? " PoU" : "");
     // }
 
+    // Check if the packet is a write request
+    if (pkt->isWrite()) {
+        // Get the data and size of the write request
+        uint8_t* data = pkt->getPtr<uint8_t>(); // Pointer to the data being written
+        unsigned size = pkt->getSize();        // Size of the data
+
+        if (data && size > 0) {
+            DPRINTF(CC_BankedCache, "WriteReq Data (size: %u): \n", size);
+            for (unsigned i = 0; i < size; ++i) {
+                DPRINTF(CC_BankedCache, "%02x \n", data[i]); // Print each byte in hex
+            }
+            DPRINTF(CC_BankedCache, "\n");
+        } else {
+            DPRINTF(CC_BankedCache, "WriteReq with no data or zero size.\n");
+        }
+    }
+
     // Drop the packet after logging
     delete pkt;
 

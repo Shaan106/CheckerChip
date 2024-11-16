@@ -251,6 +251,12 @@ DynInst::~DynInst()
     }
 #endif
 
+    // Free storeData if allocated
+    // if (storeData) {
+    //     delete[] storeData;
+    //     storeData = nullptr; // Prevent dangling pointer
+    // }
+
     delete [] memData;
     delete traceData;
     fault = NoFault;

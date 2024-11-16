@@ -201,6 +201,7 @@ class DynInst : public ExecContext, public RefCounted
     ---------------------------- CHECKER CHIP ST DATA VALS ----------------------------
   */
 
+  private:
     uint8_t *storeData = nullptr; // Pointer to the store data.
     unsigned storeDataSize = 0;   // Size of the store data.
 
