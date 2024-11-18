@@ -18,7 +18,8 @@ from gem5.isas import ISA
 cache_hierarchy = CheckerCacheHierarchy(
     l1d_size="32kB", 
     l1i_size="32kB", 
-    l2_size="256kB"
+    l2_size="256kB",
+    l3_size="256kB"
 )
 # type of RAM, what size
 memory = SingleChannelDDR3_1600("8GiB")

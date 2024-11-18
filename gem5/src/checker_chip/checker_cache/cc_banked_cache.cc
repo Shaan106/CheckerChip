@@ -95,6 +95,11 @@ bool
 CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
 {
     DPRINTF(CC_BankedCache, "Received timing request: %s\n", pkt->print());
+
+    // Determine the bank ID based on the address
+    unsigned bankId = owner->calculateBankId(pkt->getAddr());
+
+    DPRINTF(CC_BankedCache, "Associated bank: %u\n", bankId);
     
     // shows what is printed, right now start and end address.
     // void

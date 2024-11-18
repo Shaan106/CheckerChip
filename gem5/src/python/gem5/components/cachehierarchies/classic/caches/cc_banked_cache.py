@@ -29,7 +29,7 @@ class CC_CacheInstance(CC_BankedCache):
         clusivity: Clusivity = "mostly_incl",
         PrefetcherCls: Type[BasePrefetcher] = StridePrefetcher,
 
-        num_banks: int = 4, #custom added
+        num_banks: int = 8, #custom added
     ):
         super().__init__()
         self.size = size
