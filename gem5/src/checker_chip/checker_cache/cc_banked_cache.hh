@@ -9,6 +9,11 @@
 #include "base/logging.hh" // For DPRINTF
 #include "debug/CC_BankedCache.hh"
 
+#include "mem/packet.hh" // For PacketPtr and PacketList
+#include "base/types.hh" // For Cycles
+#include <list>          // For PacketList handling
+#include <string>        // For string operations, if needed
+
 namespace gem5
 {
 
@@ -24,12 +29,21 @@ class CC_BankedCache : public Cache
     // Override the getPort method
     Port &getPort(const std::string &if_name, PortID idx = InvalidPortID) override;
 
+  // private:
+    // EventFunctionWrapper freeBankClockEvent;
+
   protected:
     // Number of banks
     unsigned numBanks;
 
+    // bankFreeList
+    std::vector<bool> bankFreeList;
+
+    //free a certain bank after some set delay
+    void freeBank(unsigned bankID); 
+
     // Bank selection function
-    unsigned calculateBankId(Addr addr) const;
+    unsigned calculateBankId(Addr addr);
 
     // Override the access() method
     bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
@@ -86,6 +100,14 @@ class CC_BankedCache : public Cache
          * from the CC_BankedCache whenever it is unblocked.
          */
         void trySendRetry();
+
+        /**
+         * Create and send a dummy response packet after a specified latency.
+         * This is called when a timing request requires a response.
+         *
+         * @param pkt The original request packet
+         */
+        void createAndSendDummyResponse(PacketPtr pkt);
 
       protected:
         /**

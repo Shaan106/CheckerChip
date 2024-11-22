@@ -255,7 +255,7 @@ CC_Buffer::updateExecuteBufferContents()
                     sendReadReqPacket(*it);
                     // sendDummyPacket();
                 } else if (it->isWriteInst()) {
-                    DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemReadPacket.\n");
+                    DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemWritePacket.\n");
                     sendWriteReqPacket(*it);
                     // sendDummyPacket();
                 } else {

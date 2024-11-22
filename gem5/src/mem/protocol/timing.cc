@@ -39,6 +39,8 @@
  */
 
 #include "mem/protocol/timing.hh"
+#include <iostream>
+#include "base/logging.hh"
 
 namespace gem5
 {
@@ -49,6 +51,9 @@ bool
 TimingRequestProtocol::sendReq(TimingResponseProtocol *peer, PacketPtr pkt)
 {
     assert(pkt->isRequest());
+    // std::cout << "------------ Sending Request Packet [2]: " 
+    //           << " | Packet ID: " << pkt->id 
+    //           << std::endl;
     return peer->recvTimingReq(pkt);
 }
 
@@ -56,8 +61,8 @@ bool
 TimingRequestProtocol::trySend(
         TimingResponseProtocol *peer, PacketPtr pkt) const
 {
-  assert(pkt->isRequest());
-  return peer->tryTiming(pkt);
+    assert(pkt->isRequest());
+    return peer->tryTiming(pkt);
 }
 
 bool
@@ -80,6 +85,9 @@ bool
 TimingResponseProtocol::sendResp(TimingRequestProtocol *peer, PacketPtr pkt)
 {
     assert(pkt->isResponse());
+    // std::cout << "------------ Sending Response Packet [1]: " 
+    //           << " | Packet ID: " << pkt->id 
+    //           << std::endl;
     return peer->recvTimingResp(pkt);
 }
 
