@@ -6,6 +6,8 @@
 #include "sim/system.hh"
 
 #include "checker_chip/checker_cache/checker_packet_state.hh"
+#include "mem/cache/prefetch/base.hh"
+
 
 namespace gem5
 {
@@ -139,48 +141,6 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
 
     pkt->senderState = new CC_PacketState(42, "CustomTag");
 
-    // // Prepare variables for cache access
-    // CacheBlk *blk = nullptr;         // Pointer to cache block, initially null
-    // Cycles lat = Cycles(0);          // Latency initialized to 0 cycles
-    // PacketList writebacks;           // List to collect writebacks
-
-    // // Call the `access` function
-    // bool hit = owner->access(pkt, blk, lat, writebacks);
-
-    // // Log access results
-    // DPRINTF(CC_BankedCache, "Cache access result: %s\n", hit ? "Hit" : "Miss");
-    // DPRINTF(CC_BankedCache, "Latency: %u cycles\n", lat);
-
-    // // If there are writebacks, log them
-    // if (!writebacks.empty()) {
-    //     DPRINTF(CC_BankedCache, "Writebacks during access:\n");
-    //     for (const auto& wb_pkt : writebacks) {
-    //         DPRINTF(CC_BankedCache, "  Writeback packet: %s\n", wb_pkt->print());
-    //     }
-    // }
-
-    // Handle writes
-    // if (pkt->isWrite()) {
-    //     uint8_t* data = pkt->getPtr<uint8_t>(); // Pointer to the data being written
-    //     unsigned size = pkt->getSize();        // Size of the data
-
-    //     if (data && size > 0) {
-    //         DPRINTF(CC_BankedCache, "WriteReq Data (size: %u): \n", size);
-    //         for (unsigned i = 0; i < size; ++i) {
-    //             DPRINTF(CC_BankedCache, "%02x \n", data[i]); // Print each byte in hex
-    //         }
-    //         DPRINTF(CC_BankedCache, "\n");
-    //     } else {
-    //         DPRINTF(CC_BankedCache, "WriteReq with no data or zero size.\n");
-    //     }
-    // }
-
-    // Create and send a dummy response if the request needs a response
-    if (pkt->needsResponse()) {
-        // Create a dummy response
-        // owner->createAndSendDummyResponse(pkt);
-    }
-
     // Access the custom state
     CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
     if (state) {
@@ -192,6 +152,8 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
     // // Drop the packet after processing
     // delete pkt->senderState;
     // delete pkt;
+
+    assert(pkt->isRequest());
 
     // Accept the packet without retries
     owner->recvTimingReq(pkt);
@@ -221,21 +183,6 @@ CC_BankedCache::CC_CPUSidePort::recvRespRetry()
 void
 CC_BankedCache::CC_CPUSidePort::createAndSendDummyResponse(PacketPtr pkt)
 {
-    // Create the response packet
-    // PacketPtr pkt = pkt->makeResponse();
-    // pkt->makeResponse();
-
-    // Set additional fields if needed (e.g., set data for reads)
-    // if (pkt->isRead()) {
-    //     // // For a dummy response, you might set the data to zero or some default value
-    //     // uint8_t *data = new uint8_t[pkt->getSize()];
-    //     // std::memset(data, 0, pkt->getSize());
-    //     // pkt->setData(data);
-    //     // // Remember to delete the data when the packet is deleted
-    //     // // Use a custom deleter to free the data when the packet is destroyed
-    //     // pkt->setDataDeleter([](uint8_t *data) { delete[] data; });
-    //     pkt->setData(nullptr);
-    // }
 
     DPRINTF(CC_BankedCache, "Sending dummy response at cycle %lu: %s\n",
             owner->curCycle(), pkt->print());
@@ -249,5 +196,161 @@ CC_BankedCache::CC_CPUSidePort::createAndSendDummyResponse(PacketPtr pkt)
     }
 }
 
+
+// ---------------------- CACHE OVERRIDES --------------------------
+
+
+void
+CC_BankedCache::recvTimingReq(PacketPtr pkt)
+{
+    // DPRINTF(CacheTags, "%s tags:\n%s\n", __func__, tags->print());
+
+    CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    if (state) {
+        DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq| Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
+        // Drop the packet after processing
+        delete pkt->senderState;
+        delete pkt;
+        return;
+    } else {
+        DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq| No Custom State found for Packet ID: %lu\n", pkt->id);
+    }
+
+    promoteWholeLineWrites(pkt);
+
+    if (pkt->cacheResponding()) {
+        // a cache above us (but not where the packet came from) is
+        // responding to the request, in other words it has the line
+        // in Modified or Owned state
+        DPRINTF(Cache, "Cache above responding to %s: not responding\n",
+                pkt->print());
+
+        // if the packet needs the block to be writable, and the cache
+        // that has promised to respond (setting the cache responding
+        // flag) is not providing writable (it is in Owned rather than
+        // the Modified state), we know that there may be other Shared
+        // copies in the system; go out and invalidate them all
+        assert(pkt->needsWritable() && !pkt->responderHadWritable());
+
+        // an upstream cache that had the line in Owned state
+        // (dirty, but not writable), is responding and thus
+        // transferring the dirty line from one branch of the
+        // cache hierarchy to another
+
+        // send out an express snoop and invalidate all other
+        // copies (snooping a packet that needs writable is the
+        // same as an invalidation), thus turning the Owned line
+        // into a Modified line, note that we don't invalidate the
+        // block in the current cache or any other cache on the
+        // path to memory
+
+        // create a downstream express snoop with cleared packet
+        // flags, there is no need to allocate any data as the
+        // packet is merely used to co-ordinate state transitions
+        Packet *snoop_pkt = new Packet(pkt, true, false);
+
+        // also reset the bus time that the original packet has
+        // not yet paid for
+        snoop_pkt->headerDelay = snoop_pkt->payloadDelay = 0;
+
+        // make this an instantaneous express snoop, and let the
+        // other caches in the system know that the another cache
+        // is responding, because we have found the authorative
+        // copy (Modified or Owned) that will supply the right
+        // data
+        snoop_pkt->setExpressSnoop();
+        snoop_pkt->setCacheResponding();
+
+        // this express snoop travels towards the memory, and at
+        // every crossbar it is snooped upwards thus reaching
+        // every cache in the system
+        [[maybe_unused]] bool success = memSidePort.sendTimingReq(snoop_pkt);
+        // express snoops always succeed
+        assert(success);
+
+        // main memory will delete the snoop packet
+
+        // queue for deletion, as opposed to immediate deletion, as
+        // the sending cache is still relying on the packet
+        pendingDelete.reset(pkt);
+
+        // no need to take any further action in this particular cache
+        // as an upstram cache has already committed to responding,
+        // and we have already sent out any express snoops in the
+        // section above to ensure all other copies in the system are
+        // invalidated
+        return;
+    }
+
+    // anything that is merely forwarded pays for the forward latency and
+    // the delay provided by the crossbar
+    Tick forward_time = clockEdge(forwardLatency) + pkt->headerDelay;
+
+    if (pkt->cmd == MemCmd::LockedRMWWriteReq) {
+        // For LockedRMW accesses, we mark the block inaccessible after the
+        // read (see below), to make sure no one gets in before the write.
+        // Now that the write is here, mark it accessible again, so the
+        // write will succeed.  LockedRMWReadReq brings the block in in
+        // exclusive mode, so we know it was previously writable.
+        CacheBlk *blk = tags->findBlock(pkt->getAddr(), pkt->isSecure());
+        assert(blk && blk->isValid());
+        assert(!blk->isSet(CacheBlk::WritableBit) &&
+               !blk->isSet(CacheBlk::ReadableBit));
+        blk->setCoherenceBits(CacheBlk::ReadableBit);
+        blk->setCoherenceBits(CacheBlk::WritableBit);
+    }
+
+    Cycles lat;
+    CacheBlk *blk = nullptr;
+    bool satisfied = false;
+    {
+        PacketList writebacks;
+        // Note that lat is passed by reference here. The function
+        // access() will set the lat value.
+        satisfied = access(pkt, blk, lat, writebacks);
+
+        // After the evicted blocks are selected, they must be forwarded
+        // to the write buffer to ensure they logically precede anything
+        // happening below
+        doWritebacks(writebacks, clockEdge(lat + forwardLatency));
+    }
+
+    // Here we charge the headerDelay that takes into account the latencies
+    // of the bus, if the packet comes from it.
+    // The latency charged is just the value set by the access() function.
+    // In case of a hit we are neglecting response latency.
+    // In case of a miss we are neglecting forward latency.
+    Tick request_time = clockEdge(lat);
+    // Here we reset the timing of the packet.
+    pkt->headerDelay = pkt->payloadDelay = 0;
+
+    if (satisfied) {
+        // notify before anything else as later handleTimingReqHit might turn
+        // the packet in a response
+        ppHit->notify(CacheAccessProbeArg(pkt,accessor));
+
+        if (prefetcher && blk && blk->wasPrefetched()) {
+            DPRINTF(Cache, "Hit on prefetch for addr %#x (%s)\n",
+                    pkt->getAddr(), pkt->isSecure() ? "s" : "ns");
+            blk->clearPrefetched();
+        }
+
+        handleTimingReqHit(pkt, blk, request_time);
+    } else {
+        handleTimingReqMiss(pkt, blk, forward_time, request_time);
+
+        ppMiss->notify(CacheAccessProbeArg(pkt,accessor));
+    }
+
+    if (prefetcher) {
+        // track time of availability of next prefetch, if any
+        Tick next_pf_time = std::max(
+                            prefetcher->nextPrefetchReadyTime(), clockEdge());
+        if (next_pf_time != MaxTick) {
+            schedMemSideSendEvent(next_pf_time);
+        }
+    }
+    
+}
 
 } // namespace gem5

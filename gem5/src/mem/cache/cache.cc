@@ -422,16 +422,16 @@ Cache::recvTimingReq(PacketPtr pkt)
 {
     DPRINTF(CacheTags, "%s tags:\n%s\n", __func__, tags->print());
 
-    CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
-    if (state) {
-        DPRINTF(CC_BankedCache, "|Cache::recvTimingReq| Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
-        // Drop the packet after processing
-        delete pkt->senderState;
-        delete pkt;
-        return;
-    } else {
-        DPRINTF(CC_BankedCache, "|Cache::recvTimingReq| No Custom State found for Packet ID: %lu\n", pkt->id);
-    }
+    // CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    // if (state) {
+    //     DPRINTF(CC_BankedCache, "|Cache::recvTimingReq| Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
+    //     // Drop the packet after processing
+    //     delete pkt->senderState;
+    //     delete pkt;
+    //     return;
+    // } else {
+    //     DPRINTF(CC_BankedCache, "|Cache::recvTimingReq| No Custom State found for Packet ID: %lu\n", pkt->id);
+    // }
 
     promoteWholeLineWrites(pkt);
 

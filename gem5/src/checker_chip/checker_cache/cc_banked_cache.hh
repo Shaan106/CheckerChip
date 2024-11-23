@@ -49,6 +49,10 @@ class CC_BankedCache : public Cache
     bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                 PacketList &writebacks) override;
 
+    // custom recvTimingReq implementation
+
+    void recvTimingReq(PacketPtr pkt) override;
+
     /**
      * Port on the CPU-side that receives requests.
      * Mostly just forwards requests to the cache (owner)
