@@ -49,10 +49,15 @@ class CC_BankedCache : public Cache
     bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                 PacketList &writebacks) override;
 
+    // Custom checker access() method
+    bool cc_access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
+                   PacketList &writebacks);
+
     // custom recvTimingReq implementation
 
     void recvTimingReq(PacketPtr pkt) override;
 
+  public:
     /**
      * Port on the CPU-side that receives requests.
      * Mostly just forwards requests to the cache (owner)
@@ -113,6 +118,9 @@ class CC_BankedCache : public Cache
          */
         void createAndSendDummyResponse(PacketPtr pkt);
 
+        // returns the cache's block size
+        unsigned getCacheBlockSize();
+
       protected:
         /**
          * Receive an atomic request packet from the request port.
@@ -146,9 +154,12 @@ class CC_BankedCache : public Cache
          */
         void recvRespRetry() override;
     };
-
+  
+  protected:
     // CC_CPUSidePort cc_cpu_port;
     std::vector<CC_CPUSidePort> cc_cpu_port;
+
+    
 };
 
 } // namespace gem5

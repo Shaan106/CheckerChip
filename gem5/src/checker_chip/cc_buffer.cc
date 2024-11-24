@@ -471,58 +471,133 @@ void CC_Buffer::regStats()
     // decode_buffer_occupancy_maximum = 0;
 }
 
+// void
+// CC_Buffer::sendReadReqPacket(CheckerInst memInst)
+// {
+//     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
+
+//     // Create a dummy request
+//     Addr addr = memInst.p_addr; // Dummy address
+//     unsigned size = memInst.mem_access_data_size; // Size of the data in bytes
+
+//     RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
+
+//     // Create a packet with the request
+//     PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+
+//     // Allocate space for data (even for ReadReq, to store read data)
+//     pkt->allocate();
+
+//     // Optionally, initialize data (for write requests)
+//     // For ReadReq, this is not necessary
+
+//     // Send the packet through the memory-side port
+//     cc_mem_side_port.sendPacket(pkt);
+// }
+
+// void
+// CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
+// {
+//     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a write request packet.\n");
+
+//     // Define a dummy address and size for the write request
+//     Addr addr = memInst.p_addr;       // Dummy address
+//     unsigned size = memInst.mem_access_data_size;    // Size of the data in bytes
+
+//     // Create a dummy request with the given address and size
+//     RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
+
+//     // Create a WriteReq packet using the request
+//     PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
+
+//     // Allocate space for data (required for WriteReq)
+//     pkt->allocate();
+
+//     // Initialize the data to be written (optional, but necessary for realistic writes)
+//     uint8_t *data = pkt->getPtr<uint8_t>();
+//     // for (unsigned i = 0; i < size; ++i) {
+//     //     data[i] = i & 0xFF;  // Example: Initialize data with a simple pattern
+//     // }
+//     memcpy(data, memInst.mem_access_data_ptr, size);
+
+//     // Send the packet through the memory-side port
+//     cc_mem_side_port.sendPacket(pkt);
+// }
+
 void
 CC_Buffer::sendReadReqPacket(CheckerInst memInst)
 {
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending packet(s) for address 0x%x, size %d.\n",
+            memInst.p_addr, memInst.mem_access_data_size);
 
-    // Create a dummy request
-    Addr addr = memInst.p_addr; // Dummy address
-    unsigned size = memInst.mem_access_data_size; // Size of the data in bytes
+    Addr addr = memInst.p_addr; // Starting address
+    unsigned size = memInst.mem_access_data_size; // Request size in bytes
+    unsigned blkSize = cc_mem_side_port.getCacheBlockSize(); // Cache block size
+    unsigned remaining = size;
 
-    RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
+    while (remaining > 0) {
+        // Determine the size for the current packet
+        unsigned offset = addr % blkSize;
+        unsigned currSize = std::min(remaining, blkSize - offset);
 
-    // Create a packet with the request
-    PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+        // Create the request and packet
+        RequestPtr req = std::make_shared<Request>(addr, currSize, 0, requestorId);
+        PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
+        pkt->allocate();
 
-    // Allocate space for data (even for ReadReq, to store read data)
-    pkt->allocate();
+        // Send the packet
+        DPRINTF(CC_Buffer_Flag, "Sending packet: addr = 0x%x, size = %d, offset = %d\n",
+                addr, currSize, offset);
+        cc_mem_side_port.sendPacket(pkt);
 
-    // Optionally, initialize data (for write requests)
-    // For ReadReq, this is not necessary
-
-    // Send the packet through the memory-side port
-    cc_mem_side_port.sendPacket(pkt);
+        // Update for the next packet
+        addr += currSize;
+        remaining -= currSize;
+    }
 }
+
 
 void
 CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
 {
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a write request packet.\n");
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending write request packet(s) for address 0x%x, size %d.\n",
+            memInst.p_addr, memInst.mem_access_data_size);
 
-    // Define a dummy address and size for the write request
-    Addr addr = memInst.p_addr;       // Dummy address
-    unsigned size = memInst.mem_access_data_size;    // Size of the data in bytes
+    Addr addr = memInst.p_addr; // Starting address of the write request
+    unsigned size = memInst.mem_access_data_size; // Total size of the data to write
+    unsigned blkSize = cc_mem_side_port.getCacheBlockSize(); // Cache block size
+    unsigned remaining = size;
 
-    // Create a dummy request with the given address and size
-    RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
+    const uint8_t *data_ptr = memInst.mem_access_data_ptr;
 
-    // Create a WriteReq packet using the request
-    PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
+    while (remaining > 0) {
+        // Calculate the size for the current packet
+        unsigned offset = addr % blkSize;
+        unsigned currSize = std::min(remaining, blkSize - offset);
 
-    // Allocate space for data (required for WriteReq)
-    pkt->allocate();
+        // Create a request for the current packet
+        RequestPtr req = std::make_shared<Request>(addr, currSize, 0, requestorId);
 
-    // Initialize the data to be written (optional, but necessary for realistic writes)
-    uint8_t *data = pkt->getPtr<uint8_t>();
-    // for (unsigned i = 0; i < size; ++i) {
-    //     data[i] = i & 0xFF;  // Example: Initialize data with a simple pattern
-    // }
-    memcpy(data, memInst.mem_access_data_ptr, size);
+        // Create a WriteReq packet
+        PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
+        pkt->allocate();
 
-    // Send the packet through the memory-side port
-    cc_mem_side_port.sendPacket(pkt);
+        // Copy the data for the current packet
+        uint8_t *pktData = pkt->getPtr<uint8_t>();
+        memcpy(pktData, data_ptr, currSize);
+
+        // Send the packet
+        DPRINTF(CC_Buffer_Flag, "Sending write packet: addr = 0x%x, size = %d, offset = %d\n",
+                addr, currSize, offset);
+        cc_mem_side_port.sendPacket(pkt);
+
+        // Update the address, data pointer, and remaining size
+        addr += currSize;
+        data_ptr += currSize;
+        remaining -= currSize;
+    }
 }
+
 
 void
 CC_Buffer::sendDummyPacket()
@@ -564,6 +639,27 @@ CC_Buffer::getPort(const std::string &if_name, PortID idx)
 // CC_MemSidePort Implementation
 //
 //////////////
+
+unsigned
+CC_Buffer::CC_MemSidePort::getCacheBlockSize()
+{
+    if (isConnected()) {
+        // Use getPeer() to get the connected peer
+        auto &connected_port = getPeer();
+
+        // Attempt to cast the connected port to CC_CPUSidePort
+        auto *cc_cpu_port = dynamic_cast<gem5::CC_BankedCache::CC_CPUSidePort *>(&connected_port);
+        if (cc_cpu_port) {
+            return cc_cpu_port->getCacheBlockSize();
+        } else {
+            fatal("Connected port is not a CC_CPUSidePort and does not support cache block size queries!");
+        }
+    } else {
+        fatal("CC_MemSidePort: Port not connected to any peer!");
+    }
+}
+
+
 
 void
 CC_Buffer::CC_MemSidePort::sendPacket(PacketPtr pkt)

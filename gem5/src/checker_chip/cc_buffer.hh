@@ -35,6 +35,8 @@
 
 #include "cpu/op_class.hh"
 
+#include "checker_chip/checker_cache/cc_banked_cache.hh"
+
 namespace gem5
 {
 
@@ -131,6 +133,9 @@ class CC_Buffer : public ClockedObject
          * @param packet to send.
          */
         void sendPacket(PacketPtr pkt);
+
+        // returns cacheBlockSize
+        unsigned getCacheBlockSize();
 
       protected:
         /**
