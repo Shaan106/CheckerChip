@@ -9,6 +9,8 @@
 #include "base/logging.hh" // For DPRINTF
 #include "debug/CC_BankedCache.hh"
 
+#include "checker_chip/checker_cache/cc_bank_unit.hh"
+
 #include "mem/packet.hh" // For PacketPtr and PacketList
 #include "base/types.hh" // For Cycles
 #include <list>          // For PacketList handling
@@ -36,8 +38,18 @@ class CC_BankedCache : public Cache
     // Number of banks
     unsigned numBanks;
 
+    // checker chip additional structures around banks
+    std::vector<CC_BankUnit> bankUnits;
+
     // bankFreeList
     std::vector<bool> bankFreeList;
+
+    //cc_cache_controller - takes in packets and puts them into
+    // the appropriate bank queue
+    bool cc_cacheController(PacketPtr pkt);
+
+    //free a certain bank after some set delay
+    void cc_dispatchEvent(); 
 
     //free a certain bank after some set delay
     void freeBank(unsigned bankID); 
@@ -54,8 +66,11 @@ class CC_BankedCache : public Cache
                    PacketList &writebacks);
 
     // custom recvTimingReq implementation
-
     void recvTimingReq(PacketPtr pkt) override;
+
+    // override handling timing reqs (HIT)
+    void handleTimingReqHit(PacketPtr pkt, CacheBlk *blk,
+                        Tick request_time) override;
 
   public:
     /**

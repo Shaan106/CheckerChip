@@ -26,6 +26,9 @@ CC_BankedCache::CC_BankedCache(const CC_BankedCacheParams &p)
         cc_cpu_port.emplace_back(name() + csprintf(".cc_cpu_port[%d]", i), i, this);
     }
 
+    // Initialize bank units
+    bankUnits.resize(numBanks);
+
     // Initialize bankFreeList with all entries set to true
     bankFreeList = std::vector<bool>(numBanks, true);
 }
@@ -127,9 +130,6 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
             current_cycle, pkt->print());
 
     // Determine the bank ID based on the address
-    unsigned bankId = owner->calculateBankId(pkt->getAddr());
-
-    DPRINTF(CC_BankedCache, "Associated bank: %u\n", bankId);
 
     pkt->senderState = new CC_PacketState(42, "CustomTag");
 
@@ -154,7 +154,8 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
     assert(pkt->isRequest());
 
     // Accept the packet without retries
-    owner->recvTimingReq(pkt);
+    // owner->recvTimingReq(pkt);
+    owner->cc_cacheController(pkt);
 
     return true;
 }
@@ -195,6 +196,55 @@ CC_BankedCache::CC_CPUSidePort::createAndSendDummyResponse(PacketPtr pkt)
 }
 
 
+// ---------------------- CUSTOM CACHE METHODS --------------------------
+
+bool 
+CC_BankedCache::cc_cacheController(PacketPtr pkt)
+{
+
+    unsigned bankId = calculateBankId(pkt->getAddr());
+
+    bool bankUnitSuccess = bankUnits[bankId].addPacket(pkt);
+
+    if (bankUnitSuccess) {
+        DPRINTF(CC_BankedCache, "Packet added to bank %d\n", bankId);
+    } else {
+        DPRINTF(CC_BankedCache, "Failed to add packet to bank %d: Queue is full\n", bankId);
+        // Handle the case where the packet could not be added
+        // For example, you might need to stall or retry later
+        // PacketPtr tmp1 = bankUnits[bankId].removePacket();
+        // PacketPtr tmp2 = bankUnits[bankId].removePacket();
+        // PacketPtr tmp3 = bankUnits[bankId].removePacket();
+        // bool tmpSuccess = bankUnits[bankId].addPacket(pkt);
+    }
+
+    DPRINTF(CC_BankedCache, "Queue Size: %u\n", static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
+
+    // next clock cycle, cycle through queues to send packets to banks
+    schedule(new EventFunctionWrapper(
+    [this]() { cc_dispatchEvent(); }, name() + ".cc_dispatchEvent", true), 
+    clockEdge(Cycles(1)));
+
+    // schedule()
+
+    return true; // TODO: need to change this to only return true if we can add to a queue (leads to stalling in buffer)
+}
+
+void 
+CC_BankedCache::cc_dispatchEvent() 
+{
+    // go over every bank and if not empty, send to bank to deal with req
+    for (int i = 0; i < numBanks; ++i) {
+        if (!bankUnits[i].isEmpty()) {
+            PacketPtr pkt = bankUnits[i].removePacket();
+            recvTimingReq(pkt);
+        }
+        DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", i,  static_cast<unsigned>(bankUnits[i].getQueueSize()));
+    }
+    
+}
+
+
 // ---------------------- CACHE OVERRIDES --------------------------
 
 
@@ -202,6 +252,27 @@ void
 CC_BankedCache::recvTimingReq(PacketPtr pkt)
 {
     // DPRINTF(CacheTags, "%s tags:\n%s\n", __func__, tags->print());
+
+    // unsigned bankId = calculateBankId(pkt->getAddr());
+
+    // bool bankUnitSuccess = bankUnits[bankId].addPacket(pkt);
+
+    // if (bankUnitSuccess) {
+    //     DPRINTF(CC_BankedCache, "Packet added to bank %d\n", bankId);
+    // } else {
+    //     DPRINTF(CC_BankedCache, "Failed to add packet to bank %d: Queue is full\n", bankId);
+    //     // Handle the case where the packet could not be added
+    //     // For example, you might need to stall or retry later
+    //     PacketPtr tmp1 = bankUnits[bankId].removePacket();
+    //     PacketPtr tmp2 = bankUnits[bankId].removePacket();
+    //     PacketPtr tmp3 = bankUnits[bankId].removePacket();
+    //     // bool tmpSuccess = bankUnits[bankId].addPacket(pkt);
+    // }
+
+    // DPRINTF(CC_BankedCache, "Queue Size: %u\n", static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
+
+
+    // bankUnits[bankId].printUnit(); // Print the bank's queue
 
     DPRINTF(CC_BankedCache, "[[[1]]] CC_BankedCache::recvTimingReq | Packet ID: %lu\n", pkt->id);
 
@@ -333,8 +404,18 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
     }
 
     CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    // DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq| Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
+
     if (state) {
-        DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq| Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
+        DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq|\n");
+    }
+    DPRINTF(CC_BankedCache, "%s for %s\n", __func__, pkt->print());
+    // Print the values after the block
+    DPRINTF(CC_BankedCache, "Access Result: lat = %d, satisfied = %s, blk = %s\n",
+        lat, satisfied ? "true" : "false", blk ? "valid" : "nullptr");
+
+    DPRINTF(CC_BankedCache, "pkt->needsResponse(): %s\n", pkt->needsResponse() ? "true" : "false");
+    if (state) {
         // Drop the packet after processing
         delete pkt->senderState;
         delete pkt;
@@ -397,7 +478,7 @@ CC_BankedCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                     "Should never see a write in a read-only cache %s\n",
                     name());
 
-        DPRINTF(CC_BankedCache, "%s for %s\n", __func__, pkt->print());
+        // DPRINTF(CC_BankedCache, "%s for %s\n", __func__, pkt->print());
 
         // flush and invalidate any existing block
         CacheBlk *old_blk(tags->findBlock(pkt->getAddr(), pkt->isSecure()));
@@ -674,6 +755,91 @@ CC_BankedCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
     return false;
 }
 
+
+void
+CC_BankedCache::handleTimingReqHit(PacketPtr pkt, CacheBlk *blk, Tick request_time)
+{
+    // should never be satisfying an uncacheable access as we
+    // flush and invalidate any existing block as part of the
+    // lookup
+    assert(!pkt->req->isUncacheable());
+
+    // handle special cases for LockedRMW transactions
+    if (pkt->isLockedRMW()) {
+        Addr blk_addr = pkt->getBlockAddr(blkSize);
+
+        if (pkt->isRead()) {
+            // Read hit for LockedRMW.  Since it requires exclusive
+            // permissions, there should be no outstanding access.
+            assert(!mshrQueue.findMatch(blk_addr, pkt->isSecure()));
+            // The keys to LockedRMW are that (1) we always have an MSHR
+            // allocated during the RMW interval to catch snoops and
+            // defer them until after the RMW completes, and (2) we
+            // clear permissions on the block to turn any upstream
+            // access other than the matching write into a miss, causing
+            // it to append to the MSHR as well.
+
+            // Because we hit in the cache, we have to fake an MSHR to
+            // achieve part (1).  If the read had missed, this MSHR
+            // would get allocated as part of normal miss processing.
+            // Basically we need to get the MSHR in the same state as if
+            // we had missed and just received the response.
+            // Request *req2 = new Request(*(pkt->req));
+            RequestPtr req2 = std::make_shared<Request>(*(pkt->req));
+            PacketPtr pkt2 = new Packet(req2, pkt->cmd);
+            MSHR *mshr = allocateMissBuffer(pkt2, curTick(), true);
+            // Mark the MSHR "in service" (even though it's not) to prevent
+            // the cache from sending out a request.
+            mshrQueue.markInService(mshr, false);
+            // Part (2): mark block inaccessible
+            assert(blk);
+            blk->clearCoherenceBits(CacheBlk::ReadableBit);
+            blk->clearCoherenceBits(CacheBlk::WritableBit);
+        } else {
+            assert(pkt->isWrite());
+            // All LockedRMW writes come here, as they cannot miss.
+            // Need to undo the two things described above.  Block
+            // permissions were already restored earlier in this
+            // function, prior to the access() call.  Now we just need
+            // to clear out the MSHR.
+
+            // Read should have already allocated MSHR.
+            MSHR *mshr = mshrQueue.findMatch(blk_addr, pkt->isSecure());
+            assert(mshr);
+            // Fake up a packet and "respond" to the still-pending
+            // LockedRMWRead, to process any pending targets and clear
+            // out the MSHR
+            PacketPtr resp_pkt =
+                new Packet(pkt->req, MemCmd::LockedRMWWriteResp);
+            resp_pkt->senderState = mshr;
+            recvTimingResp(resp_pkt);
+        }
+    }
+
+    if (pkt->needsResponse()) {
+        // These delays should have been consumed by now
+        assert(pkt->headerDelay == 0);
+        assert(pkt->payloadDelay == 0);
+
+        pkt->makeTimingResponse();
+
+        // In this case we are considering request_time that takes
+        // into account the delay of the xbar, if any, and just
+        // lat, neglecting responseLatency, modelling hit latency
+        // just as the value of lat overriden by access(), which calls
+        // the calculateAccessLatency() function.
+        cpuSidePort.schedTimingResp(pkt, request_time);
+    } else {
+        DPRINTF(Cache, "%s satisfied %s, no response needed\n", __func__,
+                pkt->print());
+
+        // queue the packet for deletion, as the sending cache is
+        // still relying on it; if the block is found in access(),
+        // CleanEvict and Writeback messages will be deleted
+        // here as well
+        pendingDelete.reset(pkt);
+    }
+}
 
 
 bool
