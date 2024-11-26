@@ -61,16 +61,17 @@ class CC_BankedCache : public Cache
     bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                 PacketList &writebacks) override;
 
-    // Custom checker access() method
-    bool cc_access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
-                   PacketList &writebacks);
-
     // custom recvTimingReq implementation
     void recvTimingReq(PacketPtr pkt) override;
 
     // override handling timing reqs (HIT)
     void handleTimingReqHit(PacketPtr pkt, CacheBlk *blk,
                         Tick request_time) override;
+    
+    // override handling timing reqs (MISS)
+    void handleTimingReqMiss(PacketPtr pkt, CacheBlk *blk,
+                          Tick forward_time,
+                          Tick request_time) override;
 
   public:
     /**

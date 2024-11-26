@@ -14,7 +14,8 @@
 #include <deque> 
 
 #include "cc_inst.hh" // for including new instruction class defn.
-// #include "cc_creditSystem.hh"
+
+#include "checker_chip/checker_cache/checker_packet_state.hh"
 
 
 namespace gem5
@@ -471,58 +472,6 @@ void CC_Buffer::regStats()
     // decode_buffer_occupancy_maximum = 0;
 }
 
-// void
-// CC_Buffer::sendReadReqPacket(CheckerInst memInst)
-// {
-//     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
-
-//     // Create a dummy request
-//     Addr addr = memInst.p_addr; // Dummy address
-//     unsigned size = memInst.mem_access_data_size; // Size of the data in bytes
-
-//     RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
-
-//     // Create a packet with the request
-//     PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
-
-//     // Allocate space for data (even for ReadReq, to store read data)
-//     pkt->allocate();
-
-//     // Optionally, initialize data (for write requests)
-//     // For ReadReq, this is not necessary
-
-//     // Send the packet through the memory-side port
-//     cc_mem_side_port.sendPacket(pkt);
-// }
-
-// void
-// CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
-// {
-//     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a write request packet.\n");
-
-//     // Define a dummy address and size for the write request
-//     Addr addr = memInst.p_addr;       // Dummy address
-//     unsigned size = memInst.mem_access_data_size;    // Size of the data in bytes
-
-//     // Create a dummy request with the given address and size
-//     RequestPtr req = std::make_shared<Request>(addr, size, 0, requestorId);
-
-//     // Create a WriteReq packet using the request
-//     PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
-
-//     // Allocate space for data (required for WriteReq)
-//     pkt->allocate();
-
-//     // Initialize the data to be written (optional, but necessary for realistic writes)
-//     uint8_t *data = pkt->getPtr<uint8_t>();
-//     // for (unsigned i = 0; i < size; ++i) {
-//     //     data[i] = i & 0xFF;  // Example: Initialize data with a simple pattern
-//     // }
-//     memcpy(data, memInst.mem_access_data_ptr, size);
-
-//     // Send the packet through the memory-side port
-//     cc_mem_side_port.sendPacket(pkt);
-// }
 
 void
 CC_Buffer::sendReadReqPacket(CheckerInst memInst)
@@ -544,6 +493,10 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
         RequestPtr req = std::make_shared<Request>(addr, currSize, 0, requestorId);
         PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
         pkt->allocate();
+        pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
+                                              42, // custom info
+                                              "CustomTag" //custom info
+                                              );
 
         // Send the packet
         DPRINTF(CC_Buffer_Flag, "Sending packet: addr = 0x%x, size = %d, offset = %d\n",
@@ -581,6 +534,11 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         // Create a WriteReq packet
         PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
         pkt->allocate();
+
+        pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
+                                        42, // custom info
+                                        "CustomTag" //custom info
+                                        );
 
         // Copy the data for the current packet
         uint8_t *pktData = pkt->getPtr<uint8_t>();
@@ -683,6 +641,12 @@ CC_Buffer::CC_MemSidePort::recvTimingResp(PacketPtr pkt)
 
     // Process the response as needed
     // For now, we'll just delete the packet
+
+    // Not deleting packet, because right now sending all packets - deleted elsewhere
+    // delete pkt;
+
+    // only receive cc_state packets
+    delete pkt->senderState;
     delete pkt;
 
     return true;
