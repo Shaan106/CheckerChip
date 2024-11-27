@@ -138,7 +138,7 @@ class CC_Buffer : public ClockedObject
          *
          * @param packet to send.
          */
-        void sendPacket(PacketPtr pkt);
+        bool sendPacket(PacketPtr pkt);
 
         // returns cacheBlockSize
         unsigned getCacheBlockSize();
@@ -187,13 +187,13 @@ class CC_Buffer : public ClockedObject
      * Method to create and send a readReq packet through cc_mem_side_port.
      */
     // void sendReadReqPacket(CheckerInst memInst);
-    void sendReadReqPacket(CheckerInst memInst);
+    bool sendReadReqPacket(CheckerInst memInst);
 
     /**
      * Method to create and send a readWrite packet through cc_mem_side_port.
      */
     // void sendWriteReqPacket(CheckerInst memInst);
-    void sendWriteReqPacket(CheckerInst memInst);
+    bool sendWriteReqPacket(CheckerInst memInst);
 
     /**
      * Called by an outside object. Starts off the events to fill the buffer

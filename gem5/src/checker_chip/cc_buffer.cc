@@ -26,7 +26,7 @@ Constructor for the CC_buffer.
 CC_Buffer::CC_Buffer(const CC_BufferParams &params)
     : ClockedObject(params), // Initialize base class ClockedObject with params
       bufferClockEvent([this] { processBufferClockEvent(); }, name() + ".bufferClockEvent"), // Initialize bufferClockEvent with the provided lambda function
-      max_credits(params.maxCredits), // Initialize max_credits using the value from params
+      max_credits(128), // Initialize max_credits using the value from params
 
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
 
@@ -35,14 +35,14 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       decode_buffer_credits(
                         &cc_buffer_clock,
-                        params.maxCredits, //max_credits
+                        128, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        params.maxCredits, //max_credits
+                        128, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -69,12 +69,13 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       requestorId(1000),
       memVerifyAddrSet()
 {
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
+    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
     std::string obj_name = name();
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Object name is %s\n", obj_name);
+    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Object name is %s\n", obj_name);
     
     // stats registered in regStats
+
     functional_unit_pool->dump(); // debug statement to check if functional pools exist
 
     // Schedule the buffer clock event to trigger after the initial period
@@ -132,12 +133,12 @@ void CC_Buffer::processBufferClockEvent()
 
     //DEBUG for buffer clocks
     if (cc_buffer_clock % 100 == 0) {
-        DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
+        // DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
 
         // sendDummyPacket();
 
         for (const auto& pair : debugStringMap) {
-            DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
+            // DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
         }
     }
 
@@ -158,13 +159,13 @@ CC_Buffer::updateDecodeBufferContents()
         if (it->instDecodeCycle <= cc_buffer_clock) {
             // Print the instruction being moved to execute
 
-            DPRINTF(CC_Buffer_Flag, "---------Decoding instruction: %s---------\n", it->getStaticInst()->getName());
-            DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
-            DPRINTF(CC_Buffer_Flag, "Inst instDecodeCycle: %d\n", it->instDecodeCycle);
-            // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits + 1);
-            DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits() + 1);
-            // DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits - 1);
-            DPRINTF(CC_Buffer_Flag, "New num execute credits: %d\n", execute_buffer_credits.getCredits() - 1);
+            // DPRINTF(CC_Buffer_Flag, "---------Decoding instruction: %s---------\n", it->getStaticInst()->getName());
+            // DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
+            // DPRINTF(CC_Buffer_Flag, "Inst instDecodeCycle: %d\n", it->instDecodeCycle);
+            // // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_current_credits + 1);
+            // DPRINTF(CC_Buffer_Flag, "Num decode credits: %d\n", decode_buffer_credits.getCredits() + 1);
+            // // DPRINTF(CC_Buffer_Flag, "Num execute credits: %d\n", execute_buffer_current_credits - 1);
+            // DPRINTF(CC_Buffer_Flag, "New num execute credits: %d\n", execute_buffer_credits.getCredits() - 1);
 
             //TODO: push items here to the execute_buffer
             //TODO: make sure execute_buffer not full
@@ -191,10 +192,10 @@ CC_Buffer::updateDecodeBufferContents()
 
             
             if (currentItemsRemoved >= decode_buffer_bandwidth) {
-                DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", decode_buffer_bandwidth);
+                // DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", decode_buffer_bandwidth);
                 return; //want to exit function here if more than decode_buffer_bandwidth number of items have been removed.
             } else if (buffer_system_stall_flag==1) {
-                DPRINTF(CC_Buffer_Flag, "Execute buffer reached max credits, no more insts removable\n");
+                // DPRINTF(CC_Buffer_Flag, "Execute buffer reached max credits, no more insts removable\n");
                 return; //want to exit function here if execute buffer has no more credits available
             }
         } else {
@@ -210,20 +211,22 @@ CC_Buffer::updateExecuteBufferContents()
     for (auto it = execute_buffer.begin(); it != execute_buffer.end(); )
     {
         if (it->instExecuteCycle <= cc_buffer_clock && it->instInFU == true) {
-            DPRINTF(CC_Buffer_Flag, "---------Finished executing instruction: %s---------\n", it->getStaticInst()->getName());
-            DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
-            DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
+            // DPRINTF(CC_Buffer_Flag, "---------Finished executing instruction: %s---------\n", it->getStaticInst()->getName());
+            // DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
+            // DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
 
             if (!it->execVerify_bit) {
                 it->execVerify_bit = true;
-                DPRINTF(CC_Buffer_Flag, "Marking instruction as functionally verified and freeing functional unit %d\n", it->functional_unit_index);
+                // DPRINTF(CC_Buffer_Flag, "Marking instruction as functionally verified and freeing functional unit %d\n", it->functional_unit_index);
                 functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
             }
 
             if (!it->memVerify_bit) {
                 // if memVerify is false inst is a mem inst
-                DPRINTF(CC_Buffer_Flag, "Marking memory instruction as functionally verified and freeing functional unit %d\n", it->functional_unit_index);
+                // DPRINTF(CC_Buffer_Flag, "Marking memory instruction as functionally verified and freeing functional unit %d\n", it->functional_unit_index);
                 auto searchedAddr = memVerifyAddrSet.find(it->uniqueInstSeqNum); //try to find uniqueInstSeqNum in set
+
+                // DPRINTF(CC_Buffer_Flag, "%d\n", memVerifyAddrSet.size());
 
                 if (searchedAddr == memVerifyAddrSet.end()){ // if uniqueInstSeqNum is not in set then it is verified
                     it->memVerify_bit = true;
@@ -234,21 +237,21 @@ CC_Buffer::updateExecuteBufferContents()
             bool inst_verified = it->execVerify_bit && it->iVerify_bit && it->memVerify_bit;
 
             if (inst_verified) {
-                DPRINTF(CC_Buffer_Flag, "Instruction verified: %s\n", it->getStaticInst()->getName());
+                // DPRINTF(CC_Buffer_Flag, "Instruction verified: %s\n", it->getStaticInst()->getName());
 
                 if (!checker_regfile.isBandwidthFull()) {
-                    DPRINTF(CC_Buffer_Flag, "Staging instruction to regfile, not full yet.\n");
+                    // DPRINTF(CC_Buffer_Flag, "Staging instruction to regfile, not full yet.\n");
                     it = execute_buffer.erase(it);
                     checker_regfile.stageInstToRegfile();
                     execute_buffer_credits.addCredit();
                 } else {
-                    DPRINTF(CC_Buffer_Flag, "Bandwidth full, instruction cannot be staged.\n");
+                    // DPRINTF(CC_Buffer_Flag, "Bandwidth full, instruction cannot be staged.\n");
                     ++it;  // Ensure iterator is advanced to prevent re-processing
                     return;
                 }
 
             } else {
-                DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s\n", it->getStaticInst()->getName());
+                // DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s\n", it->getStaticInst()->getName());
                 return;  // If not verified, exit early and recheck in the next cycle
             }
 
@@ -260,34 +263,47 @@ CC_Buffer::updateExecuteBufferContents()
                 
                 // it->memVerify_bit = true;
                 it->functional_unit_index = free_FU_idx;
-                DPRINTF(CC_Buffer_Flag, "Assigned functional unit %d to instruction %s\n", free_FU_idx, it->getStaticInst()->getName());
+                // DPRINTF(CC_Buffer_Flag, "Assigned functional unit %d to instruction %s\n", free_FU_idx, it->getStaticInst()->getName());
 
                 // OpClass op_class = it->getStaticInst()->opClass();
 
                 if (it->isReadInst()) {
-                    DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket, memVerifyAddrSet.size(): %d.\n", memVerifyAddrSet.size());
-                    it->execVerify_bit = true; // no need for exec verify, so set true now
-                    it->instExecuteCycle = cc_buffer_clock;
-                    sendReadReqPacket(*it);
+                    // DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket, memVerifyAddrSet.size(): %d.\n", memVerifyAddrSet.size());
+
+                    if (sendReadReqPacket(*it)) { // if able to send inst to mem (buffer not full)
+                        it->execVerify_bit = true;
+                        it->instExecuteCycle = cc_buffer_clock;
+                    } else {
+                        it->instInFU = false;
+                        functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
+                    }
 
                     // sendDummyPacket();
                 } else if (it->isWriteInst()) {
-                    DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemWritePacket, memVerifyAddrSet.size(): %d.\n", memVerifyAddrSet.size());
-                    it->execVerify_bit = true; // no need for exec verify, so set true now
-                    it->instExecuteCycle = cc_buffer_clock;
-                    sendWriteReqPacket(*it);
+                    // DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemWritePacket, memVerifyAddrSet.size(): %d.\n", memVerifyAddrSet.size());
+                    // it->execVerify_bit = true; // no need for exec verify, so set true now
+                    // it->instExecuteCycle = cc_buffer_clock;
+                    // sendWriteReqPacket(*it);
+
+                    if (sendWriteReqPacket(*it)) { // if able to send inst to mem (buffer not full)
+                        it->execVerify_bit = true;
+                        it->instExecuteCycle = cc_buffer_clock;
+                    } else {
+                        it->instInFU = false;
+                        functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
+                    }
                     // sendDummyPacket();
                 } else {
                     // it->memVerify_bit = true; // no need for mem verify, so set true now
                     it->memVerify_bit = true;
                     it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
-                    DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
+                    // DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
                 }
 
                 ++it;
 
             } else if (free_FU_idx == -1) {
-                DPRINTF(CC_Buffer_Flag, "No functional units free for instruction: %s\n", it->getStaticInst()->getName());
+                // DPRINTF(CC_Buffer_Flag, "No functional units free for instruction: %s\n", it->getStaticInst()->getName());
                 return;
 
             } else {
@@ -295,7 +311,7 @@ CC_Buffer::updateExecuteBufferContents()
                     it = execute_buffer.erase(it);
                     execute_buffer_credits.addCredit();
                 } else {
-                    DPRINTF(CC_Buffer_Flag, "No FUs capable of executing instruction: %s\n", it->getStaticInst()->getName());
+                    // DPRINTF(CC_Buffer_Flag, "No FUs capable of executing instruction: %s\n", it->getStaticInst()->getName());
                     return;
                 }
             }
@@ -323,7 +339,7 @@ destructor in case we need to deal with memory stuff
 */
 CC_Buffer::~CC_Buffer()
 {
-    // DPRINTF(CC_Buffer_Flag, "Destructor called\n");
+    // // DPRINTF(CC_Buffer_Flag, "Destructor called\n");
 }
 
 
@@ -343,14 +359,14 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     checkerInst.iVerify_bit = true;
 
     Cycles currentCycle = Cycles(clockEdge() / clockPeriod());     // Compute and print the current clock cycle
-    DPRINTF(CC_Buffer_Flag, "Current CPU clock cycle: %lu\n", currentCycle);
-    DPRINTF(CC_Buffer_Flag, "Current cc_buffer clock cycle: %lu\n", cc_buffer_clock);
-    DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
+    // DPRINTF(CC_Buffer_Flag, "Current CPU clock cycle: %lu\n", currentCycle);
+    // DPRINTF(CC_Buffer_Flag, "Current cc_buffer clock cycle: %lu\n", cc_buffer_clock);
+    // DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
 
     // test for functional unit
     debugStringMap[checkerInst.getStaticInst()->getName()] = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
     int inst_latency = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
-    DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %lu --------- !!!!!!!!!\n", inst_latency, cc_buffer_clock + inst_latency);
+    // DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %lu --------- !!!!!!!!!\n", inst_latency, cc_buffer_clock + inst_latency);
 
 
     // Add the string to the buffer
@@ -370,8 +386,8 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     decode_buffer_contents += "]";
 
     // Output the buffer contents in one line
-    // DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_current_credits, decode_buffer_contents.c_str());
-    DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_credits.getCredits(), decode_buffer_contents.c_str());
+    // // DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_current_credits, decode_buffer_contents.c_str());
+    // DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_credits.getCredits(), decode_buffer_contents.c_str());
 }
 
 
@@ -387,7 +403,7 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
     Addr inst_addr = instName->pcState().instAddr();
     unsigned int tlb_latency = tlb.translate(inst_addr);
 
-    DPRINTF(CC_Buffer_Flag, " inst->seqNum : %lu\n", instName->seqNum);
+    // DPRINTF(CC_Buffer_Flag, " inst->seqNum : %lu\n", instName->seqNum);
 
     // Create a CheckerInst object with credits as the parameter
     CheckerInst checkerInst(cc_buffer_clock + decode_buffer_latency, //instDecodeCycle = currentCycle + decode_buffer_latency (5)
@@ -398,7 +414,7 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
                             instName->staticInst // staticInst passed in (contains info about the instruction)
                             );
 
-    DPRINTF(CC_Buffer_Flag, "!!!!!!!!!!!!TLB LATENCY !!!!!!!!!!!!!!!!!! : %lu\n", checkerInst.instTranslationCycle);
+    // DPRINTF(CC_Buffer_Flag, "!!!!!!!!!!!!TLB LATENCY !!!!!!!!!!!!!!!!!! : %lu\n", checkerInst.instTranslationCycle);
 
     if (instName->isMemRef()) {
 
@@ -420,16 +436,16 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
         }
 
 
-        DPRINTF(CC_Buffer_Flag, "inst: %s, v_addr: 0x%x, p_addr = 0x%x\n", checkerInst.getStaticInst()->getName(), checkerInst.v_addr, checkerInst.p_addr);
-        DPRINTF(CC_Buffer_Flag, "mem_data_size: %d, mem_data: \n", checkerInst.mem_access_data_size);
+        // DPRINTF(CC_Buffer_Flag, "inst: %s, v_addr: 0x%x, p_addr = 0x%x\n", checkerInst.getStaticInst()->getName(), checkerInst.v_addr, checkerInst.p_addr);
+        // DPRINTF(CC_Buffer_Flag, "mem_data_size: %d, mem_data: \n", checkerInst.mem_access_data_size);
         for (unsigned i = 0; i < checkerInst.mem_access_data_size; ++i) {
             if (checkerInst.mem_access_data_ptr == nullptr) {
-                DPRINTF(CC_Buffer_Flag, "Error: mem_data_ptr is null.\n");
+                // DPRINTF(CC_Buffer_Flag, "Error: mem_data_ptr is null.\n");
             } else {
-                DPRINTF(CC_Buffer_Flag, "0x%x \n", checkerInst.mem_access_data_ptr[i]);
+                // DPRINTF(CC_Buffer_Flag, "0x%x \n", checkerInst.mem_access_data_ptr[i]);
             }
         }
-        DPRINTF(CC_Buffer_Flag, "\n");
+        // DPRINTF(CC_Buffer_Flag, "\n");
     }
     // Return the created CheckerInst object
     return checkerInst;
@@ -461,21 +477,6 @@ void CC_Buffer::regStats()
         .desc("Number of cycles stalled due to buffer")
         .flags(statistics::total);
 
-    // decode_buffer_occupancy_total
-    //     .name(name() + ".decode_buffer_occupancy_total")
-    //     .desc("Total occupancy of the decode buffer over time")
-    //     .flags(statistics::total);
-
-    // decode_buffer_occupancy_avg
-    //     .name(name() + ".decode_buffer_occupancy_avg")
-    //     .desc("Average occupancy of the decode buffer")
-    //     .precision(2);
-
-    // decode_buffer_occupancy_maximum
-    //     .name(name() + ".decode_buffer_occupancy_maximum")
-    //     .desc("Maximum occupancy of the decode buffer")
-    //     .flags(statistics::total);
-
     decode_buffer_occupancy_histogram
         .init(int64_t(0), int64_t(max_credits), int64_t(1))
         .name(name() + ".decode_buffer_occupancy_histogram")
@@ -495,11 +496,10 @@ void CC_Buffer::regStats()
 }
 
 
-void
+bool
 CC_Buffer::sendReadReqPacket(CheckerInst memInst)
 {
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending packet(s) for address 0x%x, size %d.\n",
-            memInst.p_addr, memInst.mem_access_data_size);
+    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending packet(s) for address 0x%x, size %d.\n", memInst.p_addr, memInst.mem_access_data_size);
 
     Addr addr = memInst.p_addr; // Starting address
 
@@ -525,22 +525,26 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
                                               );
 
         // Send the packet
-        DPRINTF(CC_Buffer_Flag, "Sending packet: addr = 0x%x, size = %d, offset = %d\n",
-                addr, currSize, offset);
-        cc_mem_side_port.sendPacket(pkt);
+        // DPRINTF(CC_Buffer_Flag, "Sending packet: addr = 0x%x, size = %d, offset = %d\n", addr, currSize, offset);
+        bool sendSuccess = cc_mem_side_port.sendPacket(pkt);
+        
+        if (!sendSuccess) {
+            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendReadReqPacket).\n");
+        }
 
         // Update for the next packet
         addr += currSize;
         remaining -= currSize;
+
+        return sendSuccess;
     }
 }
 
 
-void
+bool
 CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
 {
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending write request packet(s) for address 0x%x, size %d.\n",
-            memInst.p_addr, memInst.mem_access_data_size);
+    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending write request packet(s) for address 0x%x, size %d.\n", memInst.p_addr, memInst.mem_access_data_size);
 
     Addr addr = memInst.p_addr; // Starting address of the write request
 
@@ -575,14 +579,18 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         memcpy(pktData, data_ptr, currSize);
 
         // Send the packet
-        DPRINTF(CC_Buffer_Flag, "Sending write packet: addr = 0x%x, size = %d, offset = %d\n",
-                addr, currSize, offset);
-        cc_mem_side_port.sendPacket(pkt);
+        // DPRINTF(CC_Buffer_Flag, "Sending write packet: addr = 0x%x, size = %d, offset = %d\n", addr, currSize, offset);
+        bool sendSuccess = cc_mem_side_port.sendPacket(pkt);
+        if (!sendSuccess) {
+            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendWriteReqPacket).\n");
+        }
 
         // Update the address, data pointer, and remaining size
         addr += currSize;
         data_ptr += currSize;
         remaining -= currSize;
+
+        return sendSuccess;
     }
 }
 
@@ -590,7 +598,7 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
 void
 CC_Buffer::sendDummyPacket()
 {
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
+    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending a dummy packet.\n");
 
     // Create a dummy request
     Addr addr = 0x0; // Dummy address
@@ -649,25 +657,33 @@ CC_Buffer::CC_MemSidePort::getCacheBlockSize()
 
 
 
-void
+bool
 CC_Buffer::CC_MemSidePort::sendPacket(PacketPtr pkt)
 {
-    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Sending packet: %s\n", pkt->print());
+    // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Sending packet: %s\n", pkt->print());
 
     // Send the packet
-    if (!sendTimingReq(pkt)) {
-        // If unable to send, store the packet and wait for retry
-        blockedPacket = pkt;
-        DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet blocked, waiting for retry.\n");
-    } else {
-        DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet sent successfully.\n");
+    // if (!sendTimingReq(pkt)) {
+    //     // If unable to send, store the packet and wait for retry
+    //     // blockedPacket = pkt;
+    //     // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet blocked, waiting for retry.\n");
+    // } else {
+    //     // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet sent successfully.\n");
+    // }
+
+    bool success = sendTimingReq(pkt);
+    
+    if (!success) {
+        DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendPacket).\n");
     }
+    
+    return success;
 }
 
 bool
 CC_Buffer::CC_MemSidePort::recvTimingResp(PacketPtr pkt)
 {
-    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received timing response: %s\n", pkt->print());
+    // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received timing response: %s\n", pkt->print());
 
     // Addr addr = pkt->getAddr();
 
@@ -692,7 +708,7 @@ CC_Buffer::CC_MemSidePort::recvTimingResp(PacketPtr pkt)
 void
 CC_Buffer::CC_MemSidePort::recvReqRetry()
 {
-    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received request retry.\n");
+    // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received request retry.\n");
 
     if (blockedPacket) {
         PacketPtr pkt = blockedPacket;
@@ -701,9 +717,9 @@ CC_Buffer::CC_MemSidePort::recvReqRetry()
         if (!sendTimingReq(pkt)) {
             // If still blocked, keep the packet
             blockedPacket = pkt;
-            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Retry failed, still blocked.\n");
+            // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Retry failed, still blocked.\n");
         } else {
-            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Retry successful, packet sent.\n");
+            // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Retry successful, packet sent.\n");
         }
     }
 }
@@ -711,7 +727,7 @@ CC_Buffer::CC_MemSidePort::recvReqRetry()
 void
 CC_Buffer::CC_MemSidePort::recvRangeChange()
 {
-    DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received range change.\n");
+    // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received range change.\n");
     // For simplicity, we ignore range changes
 }
 

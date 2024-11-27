@@ -153,9 +153,13 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
 
     // Accept the packet without retries
     // owner->recvTimingReq(pkt);
-    owner->cc_cacheController(pkt);
+    
 
-    return true;
+    return owner->cc_cacheController(pkt);
+
+    //prev
+    //owner->cc_cacheController(pkt);
+    //return true;
 }
 
 
@@ -223,7 +227,7 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
     [this]() { cc_dispatchEvent(); }, name() + ".cc_dispatchEvent", true), 
     clockEdge(Cycles(10))); // TODO: latency from entry to dispatch to mem
 
-    return true; // TODO: need to change this to only return true if we can add to a queue (leads to stalling in buffer)
+    return bankUnitSuccess; // TODO: need to change this to only return true if we can add to a queue (leads to stalling in buffer)
 }
 
 void 
@@ -254,7 +258,7 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
 
     DPRINTF(CC_BankedCache, "[[[1]]] CC_BankedCache::recvTimingReq | Packet ID: %lu\n", pkt->id);
 
-    DPRINTF(Cache, "satisfyRequest: Condition: getOffset %d + getSize %d <= blkSize %d is %s\n",
+    DPRINTF(CC_BankedCache, "satisfyRequest: Condition: getOffset %d + getSize %d <= blkSize %d is %s\n",
         pkt->getOffset(blkSize), pkt->getSize(), blkSize,
         (pkt->getOffset(blkSize) + pkt->getSize() <= blkSize) ? "true" : "false");
 
