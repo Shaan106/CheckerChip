@@ -31,18 +31,18 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
 
       decode_buffer_bandwidth(2), // Set decode_buffer_bandwidth to 2
-      decode_buffer_latency(5), // Set decode_buffer_latency to 5
+      decode_buffer_latency(3), // Set decode_buffer_latency to 5
 
       decode_buffer_credits(
                         &cc_buffer_clock,
-                        params.maxCredits, //max_credits = 20
+                        params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        params.maxCredits, //max_credits = 20
+                        params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -66,7 +66,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       debugStringMap({}),
       cc_mem_side_port(name() + ".cc_mem_side_port", this), // for ports
       system(params.system), // Initialize the system pointer
-      requestorId(1000)
+      requestorId(1000),
+      memVerifyAddrSet()
 {
     DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
 
@@ -219,7 +220,18 @@ CC_Buffer::updateExecuteBufferContents()
                 functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
             }
 
-            bool inst_verified = it->execVerify_bit && it->iVerify_bit;
+            if (!it->memVerify_bit) {
+                // if memVerify is false inst is a mem inst
+                DPRINTF(CC_Buffer_Flag, "Marking memory instruction as functionally verified and freeing functional unit %d\n", it->functional_unit_index);
+                auto searchedAddr = memVerifyAddrSet.find(it->uniqueInstSeqNum); //try to find uniqueInstSeqNum in set
+
+                if (searchedAddr == memVerifyAddrSet.end()){ // if uniqueInstSeqNum is not in set then it is verified
+                    it->memVerify_bit = true;
+                    functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
+                }
+            }
+
+            bool inst_verified = it->execVerify_bit && it->iVerify_bit && it->memVerify_bit;
 
             if (inst_verified) {
                 DPRINTF(CC_Buffer_Flag, "Instruction verified: %s\n", it->getStaticInst()->getName());
@@ -245,21 +257,30 @@ CC_Buffer::updateExecuteBufferContents()
 
             if (free_FU_idx >= 0) {
                 it->instInFU = true;
-                it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
+                
+                // it->memVerify_bit = true;
                 it->functional_unit_index = free_FU_idx;
                 DPRINTF(CC_Buffer_Flag, "Assigned functional unit %d to instruction %s\n", free_FU_idx, it->getStaticInst()->getName());
 
                 // OpClass op_class = it->getStaticInst()->opClass();
 
                 if (it->isReadInst()) {
-                    DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket.\n");
+                    DPRINTF(CC_Buffer_Flag, "A memory read operation, sending MemReadPacket, memVerifyAddrSet.size(): %d.\n", memVerifyAddrSet.size());
+                    it->execVerify_bit = true; // no need for exec verify, so set true now
+                    it->instExecuteCycle = cc_buffer_clock;
                     sendReadReqPacket(*it);
+
                     // sendDummyPacket();
                 } else if (it->isWriteInst()) {
-                    DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemWritePacket.\n");
+                    DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemWritePacket, memVerifyAddrSet.size(): %d.\n", memVerifyAddrSet.size());
+                    it->execVerify_bit = true; // no need for exec verify, so set true now
+                    it->instExecuteCycle = cc_buffer_clock;
                     sendWriteReqPacket(*it);
                     // sendDummyPacket();
                 } else {
+                    // it->memVerify_bit = true; // no need for mem verify, so set true now
+                    it->memVerify_bit = true;
+                    it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
                     DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
                 }
 
@@ -330,7 +351,7 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     debugStringMap[checkerInst.getStaticInst()->getName()] = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
     int inst_latency = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
     DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %lu --------- !!!!!!!!!\n", inst_latency, cc_buffer_clock + inst_latency);
-    
+
 
     // Add the string to the buffer
     decode_buffer.push_back(checkerInst);
@@ -366,12 +387,13 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
     Addr inst_addr = instName->pcState().instAddr();
     unsigned int tlb_latency = tlb.translate(inst_addr);
 
-    // DPRINTF(CC_Buffer_Flag, "!!!!!!!!!!!!TLB LATENCY !!!!!!!!!!!!!!!!!! : %d\n", tlb_latency);
+    DPRINTF(CC_Buffer_Flag, " inst->seqNum : %lu\n", instName->seqNum);
 
     // Create a CheckerInst object with credits as the parameter
     CheckerInst checkerInst(cc_buffer_clock + decode_buffer_latency, //instDecodeCycle = currentCycle + decode_buffer_latency (5)
                             0, //instExecuteCycle is initially 0
                             cc_buffer_clock + tlb_latency, //instTranslationCycle, when the inst is translated
+                            instName->seqNum,// unique identifier num
                             false, // instInFU
                             instName->staticInst // staticInst passed in (contains info about the instruction)
                             );
@@ -480,6 +502,9 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
             memInst.p_addr, memInst.mem_access_data_size);
 
     Addr addr = memInst.p_addr; // Starting address
+
+    memVerifyAddrSet.insert(memInst.uniqueInstSeqNum); // mark inst as being verified in mem
+
     unsigned size = memInst.mem_access_data_size; // Request size in bytes
     unsigned blkSize = cc_mem_side_port.getCacheBlockSize(); // Cache block size
     unsigned remaining = size;
@@ -494,6 +519,7 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
         PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
         pkt->allocate();
         pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
+                                              memInst.uniqueInstSeqNum, //unique identifier for verification on return
                                               42, // custom info
                                               "CustomTag" //custom info
                                               );
@@ -517,6 +543,9 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
             memInst.p_addr, memInst.mem_access_data_size);
 
     Addr addr = memInst.p_addr; // Starting address of the write request
+
+    memVerifyAddrSet.insert(memInst.uniqueInstSeqNum);
+
     unsigned size = memInst.mem_access_data_size; // Total size of the data to write
     unsigned blkSize = cc_mem_side_port.getCacheBlockSize(); // Cache block size
     unsigned remaining = size;
@@ -536,6 +565,7 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         pkt->allocate();
 
         pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
+                                        memInst.uniqueInstSeqNum, //unique identifier for return
                                         42, // custom info
                                         "CustomTag" //custom info
                                         );
@@ -638,6 +668,13 @@ bool
 CC_Buffer::CC_MemSidePort::recvTimingResp(PacketPtr pkt)
 {
     DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Received timing response: %s\n", pkt->print());
+
+    // Addr addr = pkt->getAddr();
+
+
+    CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    
+    owner->memVerifyAddrSet.erase(cc_packet_state->uniqueInstSeqNum);
 
     // Process the response as needed
     // For now, we'll just delete the packet

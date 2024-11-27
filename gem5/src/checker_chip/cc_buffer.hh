@@ -3,8 +3,11 @@
 
 // #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <deque>  // Include deque for buffer storage
+
+#include <cstdint>
 
 #include "params/CC_Buffer.hh"
 // #include "sim/sim_object.hh" // <--------- change to include "sim/clocked_object.hh"
@@ -101,6 +104,9 @@ class CC_Buffer : public ClockedObject
 
     System *system; // Add a pointer to the System
     RequestorID requestorId;
+
+    // sets of addresses being verified
+    mutable std::unordered_set<uint64_t> memVerifyAddrSet;  
 
   protected:
 

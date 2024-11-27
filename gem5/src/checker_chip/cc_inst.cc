@@ -7,14 +7,17 @@
 CheckerInst::CheckerInst(unsigned long instDecodeCycle,
                          unsigned long instExecuteCycle,
                          unsigned long instTranslationCycle,
+                         uint64_t uniqueInstSeqNum,
                          bool instInFU,
                         const gem5::StaticInstPtr &staticInst)
     : instDecodeCycle(instDecodeCycle),
       instExecuteCycle(instExecuteCycle),
       instTranslationCycle(instTranslationCycle),
+      uniqueInstSeqNum(uniqueInstSeqNum),
       instInFU(instInFU),
       iVerify_bit(false),
       execVerify_bit(false),
+      memVerify_bit(false),
       staticInst(staticInst),
       functional_unit_index(-1) {}
 

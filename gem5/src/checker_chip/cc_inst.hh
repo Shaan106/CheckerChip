@@ -11,6 +11,8 @@
 
 #include "cpu/op_class.hh"
 
+#include <cstdint>
+
 class CheckerInst {
 private:
     // Private member variables
@@ -31,6 +33,9 @@ public:
     unsigned mem_access_data_size;
     uint8_t* mem_access_data_ptr;
 
+    // unique identifier for inst
+    uint64_t uniqueInstSeqNum;
+
     //bool to check whether inst has been assigned a functional unit
     bool instInFU;
 
@@ -40,6 +45,9 @@ public:
     //bool to check if exec was verified
     bool execVerify_bit;
 
+    //bool to check if mem was verified
+    bool memVerify_bit;
+
     //which functional unit is executing this instruction, used to free fu when done
     int functional_unit_index; 
 
@@ -47,6 +55,7 @@ public:
     CheckerInst(unsigned long instDecodeCycle,
                 unsigned long instExecuteCycle,
                 unsigned long instTranslationCycle,
+                uint64_t uniqueInstSeqNum,
                 bool instInFU,
                 const gem5::StaticInstPtr &staticInst);
 
