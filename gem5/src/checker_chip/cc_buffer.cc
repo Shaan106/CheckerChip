@@ -26,11 +26,14 @@ Constructor for the CC_buffer.
 CC_Buffer::CC_Buffer(const CC_BufferParams &params)
     : ClockedObject(params), // Initialize base class ClockedObject with params
       bufferClockEvent([this] { processBufferClockEvent(); }, name() + ".bufferClockEvent"), // Initialize bufferClockEvent with the provided lambda function
-      max_credits(128), // Initialize max_credits using the value from params
+      
+      isCheckerActive(true), // activate or deactivate checker chip
+      
+      max_credits(128), // Initialize max_credits using the value from params (obsolete now)
 
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
 
-      decode_buffer_bandwidth(2), // Set decode_buffer_bandwidth to 2
+      decode_buffer_bandwidth(4), // Set decode_buffer_bandwidth to 2
       decode_buffer_latency(3), // Set decode_buffer_latency to 5
 
       decode_buffer_credits(
@@ -193,9 +196,11 @@ CC_Buffer::updateDecodeBufferContents()
             
             if (currentItemsRemoved >= decode_buffer_bandwidth) {
                 // DPRINTF(CC_Buffer_Flag, "Max bandwidth of %d reached, no more insts removable\n", decode_buffer_bandwidth);
+                decode_bandwidth_stalls++;
                 return; //want to exit function here if more than decode_buffer_bandwidth number of items have been removed.
             } else if (buffer_system_stall_flag==1) {
                 // DPRINTF(CC_Buffer_Flag, "Execute buffer reached max credits, no more insts removable\n");
+                decode_execute_full_stalls++;
                 return; //want to exit function here if execute buffer has no more credits available
             }
         } else {
@@ -230,7 +235,6 @@ CC_Buffer::updateExecuteBufferContents()
 
                 if (searchedAddr == memVerifyAddrSet.end()){ // if uniqueInstSeqNum is not in set then it is verified
                     it->memVerify_bit = true;
-                    functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
                 }
             }
 
@@ -246,12 +250,15 @@ CC_Buffer::updateExecuteBufferContents()
                     execute_buffer_credits.addCredit();
                 } else {
                     // DPRINTF(CC_Buffer_Flag, "Bandwidth full, instruction cannot be staged.\n");
+                    regfile_bandwidth_reached++;
                     ++it;  // Ensure iterator is advanced to prevent re-processing
                     return;
                 }
 
             } else {
                 // DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s\n", it->getStaticInst()->getName());
+                // this is because of in order execution
+                execute_old_inst_not_finished++;
                 return;  // If not verified, exit early and recheck in the next cycle
             }
 
@@ -275,8 +282,8 @@ CC_Buffer::updateExecuteBufferContents()
                         it->instExecuteCycle = cc_buffer_clock;
                     } else {
                         it->instInFU = false;
-                        functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
                     }
+                    functional_unit_pool->cc_immediateFreeUnit(it->functional_unit_index);
 
                     // sendDummyPacket();
                 } else if (it->isWriteInst()) {
@@ -290,13 +297,15 @@ CC_Buffer::updateExecuteBufferContents()
                         it->instExecuteCycle = cc_buffer_clock;
                     } else {
                         it->instInFU = false;
-                        functional_unit_pool->freeUnitNextCycle(it->functional_unit_index);
                     }
+                    functional_unit_pool->cc_immediateFreeUnit(it->functional_unit_index);
                     // sendDummyPacket();
                 } else {
                     // it->memVerify_bit = true; // no need for mem verify, so set true now
                     it->memVerify_bit = true;
-                    it->instExecuteCycle = cc_buffer_clock + functional_unit_pool->getOpLatency(it->getStaticInst()->opClass());
+                    // it->instExecuteCycle = cc_buffer_clock + (functional_unit_pool->getOpLatency(it->getStaticInst()->opClass()));
+                    it->instExecuteCycle = cc_buffer_clock + 1;
+                    
                     // DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
                 }
 
@@ -304,15 +313,23 @@ CC_Buffer::updateExecuteBufferContents()
 
             } else if (free_FU_idx == -1) {
                 // DPRINTF(CC_Buffer_Flag, "No functional units free for instruction: %s\n", it->getStaticInst()->getName());
-                return;
+                // still can send diff inst to FU I think so no return needed;
+                // return;
+                ++it;
+
+                // stats for each type of FU?
 
             } else {
                 if (it->getStaticInst()->getName() == "fault") {
                     it = execute_buffer.erase(it);
                     execute_buffer_credits.addCredit();
+                    num_fault_insts++;
                 } else {
+                    it = execute_buffer.erase(it);
+                    execute_buffer_credits.addCredit();
+                    num_unknown_insts++;
                     // DPRINTF(CC_Buffer_Flag, "No FUs capable of executing instruction: %s\n", it->getStaticInst()->getName());
-                    return;
+                    // return;
                 }
             }
         }
@@ -351,6 +368,10 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
 {
     //
     instCount = instCount + 1;
+
+    if (!isCheckerActive) { //deactivating checker chip for testing
+        return;
+    }
 
     // convert instruction into custom checker type
     CheckerInst checkerInst = instantiateObject(instName);
@@ -474,7 +495,42 @@ void CC_Buffer::regStats()
 
     regfile_insts_processed
         .name(name() + ".regfile_insts_processed")
-        .desc("Number of cycles stalled due to buffer")
+        .desc("Number of insts regfile has processes")
+        .flags(statistics::total);
+
+    decode_bandwidth_stalls
+        .name(name() + ".decode_bandwidth_stalls")
+        .desc("Number of cycles decode stalled due to decode buffer bandwidth being reached")
+        .flags(statistics::total);
+
+    decode_execute_full_stalls
+        .name(name() + ".decode_execute_full_stalls")
+        .desc("Number of cycles decode stalled due to execute buffer being full")
+        .flags(statistics::total);
+
+    regfile_bandwidth_reached
+        .name(name() + ".regfile_bandwidth_reached")
+        .desc("Number of times execute buffer paused due to bandwidth reached")
+        .flags(statistics::total);
+
+    execute_old_inst_not_finished
+        .name(name() + ".execute_old_inst_not_finished")
+        .desc("Number of times execute buffer paused due to oldest insts not being finished executing")
+        .flags(statistics::total);
+    
+    bank_queue_full_block
+        .name(name() + ".bank_queue_full_block")
+        .desc("Number of times cc_buffer attempted to send packet to banked cache and it was blocked")
+        .flags(statistics::total);
+
+    num_fault_insts
+        .name(name() + ".num_fault_insts")
+        .desc("Number of fault insts executed")
+        .flags(statistics::total);
+
+    num_unknown_insts
+        .name(name() + ".num_unknown_insts")
+        .desc("Number of unknown insts executed")
         .flags(statistics::total);
 
     decode_buffer_occupancy_histogram
@@ -488,11 +544,6 @@ void CC_Buffer::regStats()
         .name(name() + ".execute_buffer_occupancy_histogram")
         .desc("Distribution of decode buffer occupancy")
         .flags(statistics::pdf | statistics::display);
-    // Set up the formula for average occupancy
-    // decode_buffer_occupancy_avg = decode_buffer_occupancy_avg / cc_buffer_cycles;
-
-    // initially = 0
-    // decode_buffer_occupancy_maximum = 0;
 }
 
 
@@ -529,6 +580,7 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
         bool sendSuccess = cc_mem_side_port.sendPacket(pkt);
         
         if (!sendSuccess) {
+            bank_queue_full_block++;
             DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendReadReqPacket).\n");
         }
 
@@ -582,6 +634,7 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         // DPRINTF(CC_Buffer_Flag, "Sending write packet: addr = 0x%x, size = %d, offset = %d\n", addr, currSize, offset);
         bool sendSuccess = cc_mem_side_port.sendPacket(pkt);
         if (!sendSuccess) {
+            bank_queue_full_block++;
             DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendWriteReqPacket).\n");
         }
 
@@ -660,16 +713,6 @@ CC_Buffer::CC_MemSidePort::getCacheBlockSize()
 bool
 CC_Buffer::CC_MemSidePort::sendPacket(PacketPtr pkt)
 {
-    // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Sending packet: %s\n", pkt->print());
-
-    // Send the packet
-    // if (!sendTimingReq(pkt)) {
-    //     // If unable to send, store the packet and wait for retry
-    //     // blockedPacket = pkt;
-    //     // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet blocked, waiting for retry.\n");
-    // } else {
-    //     // DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet sent successfully.\n");
-    // }
 
     bool success = sendTimingReq(pkt);
     

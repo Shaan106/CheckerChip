@@ -207,6 +207,12 @@ FUPool::processFreeUnits()
 }
 
 void
+FUPool::cc_immediateFreeUnit(int fu_idx)
+{
+    unitBusy[fu_idx] = false;   
+}
+
+void
 FUPool::dump()
 {
     std::cout << "Function Unit Pool (" << name() << ")\n";

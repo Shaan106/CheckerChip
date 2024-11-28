@@ -66,6 +66,10 @@ class CC_Buffer : public ClockedObject
     // Function that creates and returns a CheckerInst object
     CheckerInst instantiateObject(const gem5::o3::DynInstPtr &instName);
 
+
+    //activating or deactivating checker chip
+    bool isCheckerActive;
+
     /// The maximum size of the buffer
     /// obsolete now, here to demonstrate passing vals from Python side to c++
     uint max_credits;
@@ -218,10 +222,21 @@ class CC_Buffer : public ClockedObject
 
     statistics::Scalar cc_buffer_cycles;
     statistics::Scalar ooo_stall_signals;
-    void addStallCycle();
 
+    statistics::Scalar decode_bandwidth_stalls;
+    statistics::Scalar decode_execute_full_stalls;
+
+    statistics::Scalar regfile_bandwidth_reached;
+    statistics::Scalar execute_old_inst_not_finished;
+
+    statistics::Scalar bank_queue_full_block;
 
     statistics::Scalar regfile_insts_processed;
+
+    statistics::Scalar num_fault_insts;
+    statistics::Scalar num_unknown_insts;
+
+    void addStallCycle();
 
     // statistics::Scalar decode_buffer_occupancy_total;
     // statistics::Formula decode_buffer_occupancy_avg;

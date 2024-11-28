@@ -60,7 +60,7 @@ class CC_BankedCache : public Cache
     bool cc_cacheController(PacketPtr pkt);
 
     //free a certain bank after some set delay
-    void cc_dispatchEvent(); 
+    void cc_dispatchEvent(unsigned bankId); 
 
     //free a certain bank after some set delay
     void freeBank(unsigned bankID); 

@@ -4,3 +4,4 @@
 /SPEC_build/
 /SPECCPU2006.clean/
 *_example.*
+**/*.png

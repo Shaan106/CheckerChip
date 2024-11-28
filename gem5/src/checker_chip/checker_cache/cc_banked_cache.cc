@@ -213,6 +213,12 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
 
     if (bankUnitSuccess) {
         DPRINTF(CC_BankedCache, "Packet added to bank %d\n", bankId);
+
+        // next "checker" clock cycle, cycle through queues to send packets to banks
+        schedule(new EventFunctionWrapper(
+        [this, bankId]() { cc_dispatchEvent(bankId); }, name() + ".cc_dispatchEvent", true), 
+        clockEdge(Cycles(4))); // TODO: latency from entry to dispatch to mem
+
     } else {
         DPRINTF(CC_BankedCache, "Failed to add packet to bank %d: Queue is full\n", bankId);
         // Handle the case where the packet could not be added
@@ -225,26 +231,29 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
 
     DPRINTF(CC_BankedCache, "Queue Size: %u\n", static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
 
-    // next clock cycle, cycle through queues to send packets to banks
-    schedule(new EventFunctionWrapper(
-    [this]() { cc_dispatchEvent(); }, name() + ".cc_dispatchEvent", true), 
-    clockEdge(Cycles(10))); // TODO: latency from entry to dispatch to mem
-
     return bankUnitSuccess; // TODO: need to change this to only return true if we can add to a queue (leads to stalling in buffer)
 }
 
 void 
-CC_BankedCache::cc_dispatchEvent() 
+CC_BankedCache::cc_dispatchEvent(unsigned bankId) 
 {
+    //bankId is which bank to send packet from
     // go over every bank and if not empty, send to bank to deal with req
-    for (int i = 0; i < numBanks; ++i) {
-        bank_queue_occupancy_histogram_arr[i]->sample(bankUnits[i].getQueueSize());
-        if (!bankUnits[i].isEmpty()) {
-            PacketPtr pkt = bankUnits[i].removePacket();
-            recvTimingReq(pkt);
-        }
-        DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", i,  static_cast<unsigned>(bankUnits[i].getQueueSize()));
+    // for (int i = 0; i < numBanks; ++i) {
+    //     bank_queue_occupancy_histogram_arr[i]->sample(bankUnits[i].getQueueSize());
+    //     if (!bankUnits[i].isEmpty()) {
+    //         PacketPtr pkt = bankUnits[i].removePacket();
+    //         recvTimingReq(pkt);
+    //     }
+    //     DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", i,  static_cast<unsigned>(bankUnits[i].getQueueSize()));
+    // }
+
+    bank_queue_occupancy_histogram_arr[bankId]->sample(bankUnits[bankId].getQueueSize());
+    if (!bankUnits[bankId].isEmpty()) {
+        PacketPtr pkt = bankUnits[bankId].removePacket();
+        recvTimingReq(pkt);
     }
+    DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", bankId,  static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
     
 }
 
@@ -425,11 +434,17 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
         if (satisfied) {
             // cache hit
             pkt->makeTimingResponse();
-            cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt);
+            schedule(new EventFunctionWrapper(
+            [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
+            clockEdge(Cycles(12)));
+            
         } else {
             // cache miss
             pkt->makeTimingResponse();
-            cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt);
+            schedule(new EventFunctionWrapper(
+            [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
+            clockEdge(Cycles(32)));
+            // cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt);
         }
 
     } else {

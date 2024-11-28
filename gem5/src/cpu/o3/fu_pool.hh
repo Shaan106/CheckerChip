@@ -156,6 +156,9 @@ class FUPool : public SimObject
     /** Frees a FU at the end of this cycle. */
     void freeUnitNextCycle(int fu_idx);
 
+    /** immediately frees a FU (for mem send "fixes" in cc) */
+    void cc_immediateFreeUnit(int fu_idx);
+
     /** Frees all FUs on the list. */
     void processFreeUnits();
 
