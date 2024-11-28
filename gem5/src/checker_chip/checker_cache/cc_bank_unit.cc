@@ -45,6 +45,18 @@ size_t CC_BankUnit::getQueueSize() const
     return packetQueue.size();
 }
 
-// Removed the printUnit() function and DPRINTF statements
+size_t CC_BankUnit::getMaxQueueSize() const
+{
+    return maxQueueSize;
+}
+
+// void CC_BankUnit::regStats() 
+// {
+//     bank_queue_occupancy_histogram
+//             .init(0, maxQueueSize, 1)  // Initialize with min, max, and step
+//             .name(name() + ".cc_buffer_test_bank_test")  // Set the dynamic name
+//             .desc("Distribution of bank queue")
+//             .flags(statistics::pdf | statistics::display);  // Set flags
+// }
 
 } // namespace gem5

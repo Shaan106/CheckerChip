@@ -112,3 +112,8 @@ void CheckerCreditSystem::updateCredits() {
     
 }
 
+
+int CheckerCreditSystem::getMaxCredits() {
+    return max_credits;
+}
+

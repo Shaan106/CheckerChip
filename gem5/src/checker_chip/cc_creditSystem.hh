@@ -50,6 +50,7 @@ public:
     void updateCredits();
 
     // // update the clock of the credits
+    int getMaxCredits();
     // void updateClock(int cc_clock);
 
 };

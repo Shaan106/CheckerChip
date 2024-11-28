@@ -4,6 +4,8 @@
 #include "base/logging.hh"
 #include "debug/CC_BankedCache.hh"
 #include "sim/system.hh"
+#include "base/statistics.hh"
+// #include <sstream>  // For std::stringstream
 
 #include "checker_chip/checker_cache/checker_packet_state.hh"
 #include "mem/cache/prefetch/base.hh"
@@ -29,8 +31,26 @@ CC_BankedCache::CC_BankedCache(const CC_BankedCacheParams &p)
     // Initialize bank units
     bankUnits.resize(numBanks);
 
+    bank_queue_occupancy_histogram_arr.resize(numBanks);
+
     // Initialize bankFreeList with all entries set to true
     bankFreeList = std::vector<bool>(numBanks, true);
+
+    // bank_queue_occupancy_histogram_arr.reserve(numBanks);
+}
+
+void CC_BankedCache::regStats()
+{
+    Cache::regStats(); // Call base class regStats()
+
+    for (size_t i = 0; i < numBanks; ++i) {
+        bank_queue_occupancy_histogram_arr[i] = new statistics::Distribution;
+        bank_queue_occupancy_histogram_arr[i]
+            ->init(0, bankUnits[i].getMaxQueueSize(), 1)  // Initialize with min, max, and step
+            .name(name() + ".bank" + std::to_string(i) + ".cc_buffer_test_bank_test")
+            .desc("Distribution of bank queue for bank " + std::to_string(i))
+            .flags(statistics::pdf | statistics::display);
+    }
 }
 
 void
@@ -139,27 +159,10 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
         DPRINTF(CC_BankedCache, "No Custom State found for Packet ID: %lu\n", pkt->id);
     }
 
-    // // Drop the packet after processing
-    // delete pkt->senderState;
-    // delete pkt;
-
-    // pkt->getOffset(blkSize) + pkt->getSize() <= blkSize fails
-
-    // DPRINTF(Cache, "satisfyRequest: Condition: getOffset %d + getSize %d <= blkSize %d is %s\n",
-    //     pkt->getOffset(blkSize), pkt->getSize(), blkSize,
-    //     (pkt->getOffset(blkSize) + pkt->getSize() <= blkSize) ? "true" : "false");
-
     assert(pkt->isRequest());
-
-    // Accept the packet without retries
-    // owner->recvTimingReq(pkt);
-    
 
     return owner->cc_cacheController(pkt);
 
-    //prev
-    //owner->cc_cacheController(pkt);
-    //return true;
 }
 
 
@@ -235,6 +238,7 @@ CC_BankedCache::cc_dispatchEvent()
 {
     // go over every bank and if not empty, send to bank to deal with req
     for (int i = 0; i < numBanks; ++i) {
+        bank_queue_occupancy_histogram_arr[i]->sample(bankUnits[i].getQueueSize());
         if (!bankUnits[i].isEmpty()) {
             PacketPtr pkt = bankUnits[i].removePacket();
             recvTimingReq(pkt);

@@ -36,6 +36,7 @@ SimObject('CC_BankedCache.py', sim_objects=['CC_BankedCache'])
 # Add the source files for both caches
 Source('cc_bank_unit.cc')
 Source('cc_banked_cache.cc')
+# Source('cc_bank_unit.cc')
 # Source('cc_simple_cache.cc')
 
 # Add debug flags for both caches

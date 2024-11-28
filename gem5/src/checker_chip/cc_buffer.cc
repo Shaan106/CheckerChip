@@ -42,7 +42,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        128, //params.maxCredits, //max_credits
+                        256, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -478,13 +478,13 @@ void CC_Buffer::regStats()
         .flags(statistics::total);
 
     decode_buffer_occupancy_histogram
-        .init(int64_t(0), int64_t(max_credits), int64_t(1))
+        .init(int64_t(0), int64_t(decode_buffer_credits.getMaxCredits()), int64_t(1))
         .name(name() + ".decode_buffer_occupancy_histogram")
         .desc("Distribution of decode buffer occupancy")
         .flags(statistics::pdf | statistics::display);
 
     execute_buffer_occupancy_histogram
-        .init(int64_t(0), int64_t(max_credits), int64_t(1))
+        .init(int64_t(0), int64_t(execute_buffer_credits.getMaxCredits()), int64_t(1))
         .name(name() + ".execute_buffer_occupancy_histogram")
         .desc("Distribution of decode buffer occupancy")
         .flags(statistics::pdf | statistics::display);

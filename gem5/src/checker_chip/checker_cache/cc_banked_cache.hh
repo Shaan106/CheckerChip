@@ -8,6 +8,7 @@
 #include "sim/port.hh"
 #include "base/logging.hh" // For DPRINTF
 #include "debug/CC_BankedCache.hh"
+#include "base/statistics.hh" //for custom stats
 
 #include "checker_chip/checker_cache/cc_bank_unit.hh"
 
@@ -34,12 +35,22 @@ class CC_BankedCache : public Cache
   // private:
     // EventFunctionWrapper freeBankClockEvent;
 
+    // Override the regStats method
+    void regStats() override;
+
   protected:
     // Number of banks
     unsigned numBanks;
 
     // checker chip additional structures around banks
     std::vector<CC_BankUnit> bankUnits;
+
+    // stats
+    // std::vector<statistics::Distribution> bank_queue_occupancy_histogram_arr;
+    // statistics::Distribution bank_queue_occupancy_histogram;
+
+    std::vector<statistics::Distribution*> bank_queue_occupancy_histogram_arr;
+    // size_t numBanks;  // Number of banks (if needed)
 
     // bankFreeList
     std::vector<bool> bankFreeList;

@@ -6,6 +6,9 @@
 #include <deque>
 #include "mem/packet.hh"
 #include "base/types.hh"
+#include "base/statistics.hh" //for custom stats
+
+#include "sim/clocked_object.hh"
 
 namespace gem5 {
 
@@ -24,6 +27,12 @@ class CC_BankUnit
 
     bool isEmpty() const;
     size_t getQueueSize() const; // Function to get current queue size
+
+    size_t getMaxQueueSize() const;
+
+    // void regStats();
+
+    // statistics::Distribution bank_queue_occupancy_histogram;
 };
 
 } // namespace gem5
