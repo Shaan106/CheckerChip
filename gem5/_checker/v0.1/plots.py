@@ -223,6 +223,7 @@ core_metrics = {}
 
 # Regex patterns to capture the relevant stats for each core
 patterns = {
+    'ooo_stall_signals': r'board\.processor\.cores(\d+)\.core\.cc_buffer\.ooo_stall_signals\s+(\d+)',
     'execute_old_inst_not_finished': r'board\.processor\.cores(\d+)\.core\.cc_buffer\.execute_old_inst_not_finished\s+(\d+)',
     'decode_execute_full_stalls': r'board\.processor\.cores(\d+)\.core\.cc_buffer\.decode_execute_full_stalls\s+(\d+)',
     'regfile_bandwidth_reached': r'board\.processor\.cores(\d+)\.core\.cc_buffer\.regfile_bandwidth_reached\s+(\d+)',
@@ -233,6 +234,7 @@ patterns = {
 }
 
 # Read the file and extract stats
+# file_path = 'your_log_file.log'  # Specify the path to your log file
 with open(file_path, 'r') as f:
     for line in f:
         # Check each pattern
@@ -245,6 +247,7 @@ with open(file_path, 'r') as f:
                 # If the core is not in the dictionary, add it
                 if core_id not in core_metrics:
                     core_metrics[core_id] = {
+                        'ooo_stall_signals': 0,
                         'execute_old_inst_not_finished': 0,
                         'decode_execute_full_stalls': 0,
                         'regfile_bandwidth_reached': 0,
@@ -265,7 +268,7 @@ for core_id, metrics in core_metrics.items():
     
     # Create a bar chart
     plt.figure(figsize=(10, 6))
-    plt.bar(labels, values)
+    bars = plt.bar(labels, values)
     
     # Add title and labels
     plt.title(f"Core {core_id} - Buffer Metrics")
@@ -274,6 +277,12 @@ for core_id, metrics in core_metrics.items():
     
     # Rotate x-axis labels for better readability
     plt.xticks(rotation=45, ha='right')
+    
+    # Annotate each bar with the value
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2, height + 0.1,  # Adjust vertical positioning
+                 f'{height}', ha='center', va='bottom', fontsize=10)
     
     # Show the plot
     plt.tight_layout()

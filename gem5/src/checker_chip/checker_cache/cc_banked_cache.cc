@@ -217,7 +217,7 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
         // next "checker" clock cycle, cycle through queues to send packets to banks
         schedule(new EventFunctionWrapper(
         [this, bankId]() { cc_dispatchEvent(bankId); }, name() + ".cc_dispatchEvent", true), 
-        clockEdge(Cycles(4))); // TODO: latency from entry to dispatch to mem
+        clockEdge(Cycles(1))); // TODO: latency from entry to dispatch to mem
 
     } else {
         DPRINTF(CC_BankedCache, "Failed to add packet to bank %d: Queue is full\n", bankId);
@@ -436,14 +436,14 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
             pkt->makeTimingResponse();
             schedule(new EventFunctionWrapper(
             [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            clockEdge(Cycles(12)));
+            clockEdge(Cycles(1)));
             
         } else {
             // cache miss
             pkt->makeTimingResponse();
             schedule(new EventFunctionWrapper(
             [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            clockEdge(Cycles(32)));
+            clockEdge(Cycles(1)));
             // cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt);
         }
 

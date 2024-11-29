@@ -18,8 +18,8 @@ from gem5.isas import ISA
 cache_hierarchy = CheckerCacheHierarchy(
     l1d_size="32kB", 
     l1i_size="32kB", 
-    l2_size="256kB",
-    l3_size="256kB"
+    l2_size="16MB",
+    l3_size="2MB",
 )
 # type of RAM, what size
 memory = SingleChannelDDR3_1600("8GiB")
@@ -39,11 +39,12 @@ board = SimpleBoard(clk_freq="3GHz",
                     cache_hierarchy=cache_hierarchy)
 
 # loading the binary for running hello-world
-binary = Resource("x86-hello64-static")
+# binary = Resource("x86-hello64-static")
+binary = Resource("x86-bubblesort")
 # binary = obtain_resource(resource_id="x86-floatmm")
 # binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/SAXPY/saxpy_static")
 # binary = "/SAXPY/saxpy"
-#setting workload to current board (we are going to run in SE mode)
+# setting workload to current board (we are going to run in SE mode)
 board.set_se_binary_workload(binary)
 
 # want to run a simulation with the board we have specified (the one just created)

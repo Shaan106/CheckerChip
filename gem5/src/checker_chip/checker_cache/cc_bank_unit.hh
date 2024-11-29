@@ -15,7 +15,7 @@ namespace gem5 {
 class CC_BankUnit
 {
   private:
-    static const size_t maxQueueSize = 16; // TODO change
+    static const size_t maxQueueSize = 64; // TODO change
     std::deque<PacketPtr> packetQueue;
 
   public:

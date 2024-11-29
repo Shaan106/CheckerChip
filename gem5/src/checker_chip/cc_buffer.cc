@@ -33,19 +33,19 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
 
-      decode_buffer_bandwidth(4), // Set decode_buffer_bandwidth to 2
+      decode_buffer_bandwidth(32), // Set decode_buffer_bandwidth to 2 // CHANGE
       decode_buffer_latency(3), // Set decode_buffer_latency to 5
 
       decode_buffer_credits(
                         &cc_buffer_clock,
-                        128, //params.maxCredits, //max_credits
+                        256, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        256, //params.maxCredits, //max_credits
+                        512, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -59,8 +59,8 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       checker_regfile(
             &cc_buffer_clock,
-            8, //latency
-            4 //bandwidth
+            1, //latency // CHANGE
+            32 //bandwidth
       ), //Checker regfile
 
       tlb(params.tlbEntries, params.tlbAssociativity, params.tlbHitLatency, params.tlbMissLatency),
@@ -133,17 +133,18 @@ void CC_Buffer::processBufferClockEvent()
 
     // Reschedule the event to occur again in cc_buffer_clock_period ticks
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
+    // schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 
     //DEBUG for buffer clocks
-    if (cc_buffer_clock % 100 == 0) {
-        // DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
+    // if (cc_buffer_clock % 100 == 0) {
+    //     // DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
 
-        // sendDummyPacket();
+    //     // sendDummyPacket();
 
-        for (const auto& pair : debugStringMap) {
-            // DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
-        }
-    }
+    //     for (const auto& pair : debugStringMap) {
+    //         // DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
+    //     }
+    // }
 
 }
 

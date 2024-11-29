@@ -65,14 +65,14 @@ class DefaultFUPool(FUPool):
 
 class CheckerFUPool(FUPool):
     FUList = [
-        CustomIntALU(),
-        IntMultDiv(),
-        FP_ALU(),
-        FP_MultDiv(),
+        CC_IntALU(),
+        CC_IntMultDiv(),
+        CC_FP_ALU(),
+        CC_FP_MultDiv(),
         ReadPort(),
-        SIMD_Unit(),
-        PredALU(),
+        CC_SIMD_Unit(),
+        CC_PredALU(),
         WritePort(),
-        RdWrPort(),
+        CC_RdWrPort(),
         IprPort(),
     ]
