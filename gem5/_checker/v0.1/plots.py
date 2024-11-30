@@ -3,6 +3,7 @@ import re
 
 # Read the gem5 output file (assuming it's named 'm5out.txt')
 file_path = '../../m5out/stats.txt'
+# file_path = 'saved_stats/iteration1.txt'
 
 # Initialize dictionaries to store stats for each core and bank
 cc_buffer_cycles = 0

@@ -39,8 +39,8 @@ board = SimpleBoard(clk_freq="3GHz",
                     cache_hierarchy=cache_hierarchy)
 
 # loading the binary for running hello-world
-# binary = Resource("x86-hello64-static")
-binary = Resource("x86-bubblesort")
+binary = Resource("x86-hello64-static")
+# binary = Resource("x86-bubblesort")
 # binary = obtain_resource(resource_id="x86-floatmm")
 # binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/SAXPY/saxpy_static")
 # binary = "/SAXPY/saxpy"

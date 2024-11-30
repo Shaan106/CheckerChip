@@ -152,7 +152,7 @@ class IprPort(FUDesc):
 
 class CC_IntALU(FUDesc):
     opList = [OpDesc(opClass="IntAlu", opLat=1)]
-    count = 64
+    count = 6*4
 
 class CC_IntMultDiv(FUDesc):
     opList = [
@@ -160,7 +160,7 @@ class CC_IntMultDiv(FUDesc):
         OpDesc(opClass="IntDiv", opLat=20, pipelined=False),
     ]
 
-    count = 32
+    count = 2*4
 
 class CC_FP_ALU(FUDesc):
     opList = [
@@ -168,7 +168,7 @@ class CC_FP_ALU(FUDesc):
         OpDesc(opClass="FloatCmp", opLat=2),
         OpDesc(opClass="FloatCvt", opLat=2),
     ]
-    count = 32
+    count = 4*4
 
 
 class CC_FP_MultDiv(FUDesc):
@@ -179,7 +179,7 @@ class CC_FP_MultDiv(FUDesc):
         OpDesc(opClass="FloatDiv", opLat=12, pipelined=False),
         OpDesc(opClass="FloatSqrt", opLat=24, pipelined=False),
     ]
-    count = 32
+    count = 2*4
 
 class CC_SIMD_Unit(FUDesc):
     opList = [
@@ -212,11 +212,11 @@ class CC_SIMD_Unit(FUDesc):
         OpDesc(opClass="SimdFloatReduceAdd"),
         OpDesc(opClass="SimdFloatReduceCmp"),
     ]
-    count = 64
+    count = 4*4
 
 class CC_PredALU(FUDesc):
     opList = [OpDesc(opClass="SimdPredAlu")]
-    count = 32
+    count = 1*4
 
 class CC_RdWrPort(FUDesc):
     opList = [
@@ -225,4 +225,4 @@ class CC_RdWrPort(FUDesc):
         OpDesc(opClass="FloatMemRead", opLat = 1),
         OpDesc(opClass="FloatMemWrite", opLat = 1), # here the opLats represent how long until we can send another req
     ]
-    count = 32
+    count = 256

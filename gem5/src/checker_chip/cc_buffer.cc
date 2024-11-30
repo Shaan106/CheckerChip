@@ -33,19 +33,21 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       decode_buffer(std::deque<CheckerInst>()), // Initialize decode_buffer as an empty deque explicitly
 
-      decode_buffer_bandwidth(32), // Set decode_buffer_bandwidth to 2 // CHANGE
+      decode_buffer_bandwidth(16), // Set decode_buffer_bandwidth to 2 // CHANGE
       decode_buffer_latency(3), // Set decode_buffer_latency to 5
 
       decode_buffer_credits(
                         &cc_buffer_clock,
-                        256, //params.maxCredits, //max_credits
+                        128, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
-                        ), // Initialize decode_buffer_credits using   
+                        ), // Initialize decode_buffer_credits using
+
+    //   isDecodePipelined(false),
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        512, //params.maxCredits, //max_credits
+                        256, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -59,9 +61,11 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       checker_regfile(
             &cc_buffer_clock,
-            1, //latency // CHANGE
-            32 //bandwidth
+            8, //latency // CHANGE
+            16 //bandwidth
       ), //Checker regfile
+
+    //   isRegfilePipelined(true),
 
       tlb(params.tlbEntries, params.tlbAssociativity, params.tlbHitLatency, params.tlbMissLatency),
 
@@ -190,7 +194,11 @@ CC_Buffer::updateDecodeBufferContents()
                 it = decode_buffer.erase(it);
                 // update credits available
                 // decode_buffer_current_credits++;
+                // if (!isDecodePipelined) {
+                    //if decode is not pipelined, only then do we add credits after 3 cycles
+                    // else we add every cycle
                 decode_buffer_credits.addCredit();
+                // }
                 currentItemsRemoved++;
             }
 
@@ -304,8 +312,8 @@ CC_Buffer::updateExecuteBufferContents()
                 } else {
                     // it->memVerify_bit = true; // no need for mem verify, so set true now
                     it->memVerify_bit = true;
-                    // it->instExecuteCycle = cc_buffer_clock + (functional_unit_pool->getOpLatency(it->getStaticInst()->opClass()));
-                    it->instExecuteCycle = cc_buffer_clock + 1;
+                    it->instExecuteCycle = cc_buffer_clock + (functional_unit_pool->getOpLatency(it->getStaticInst()->opClass()));
+                    // it->instExecuteCycle = cc_buffer_clock + 1;
                     
                     // DPRINTF(CC_Buffer_Flag, "Instruction is not a memory operation.\n");
                 }
@@ -380,14 +388,14 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     // set verification bits for all things not implemented yet
     checkerInst.iVerify_bit = true;
 
-    Cycles currentCycle = Cycles(clockEdge() / clockPeriod());     // Compute and print the current clock cycle
+    // Cycles currentCycle = Cycles(clockEdge() / clockPeriod());     // Compute and print the current clock cycle
     // DPRINTF(CC_Buffer_Flag, "Current CPU clock cycle: %lu\n", currentCycle);
     // DPRINTF(CC_Buffer_Flag, "Current cc_buffer clock cycle: %lu\n", cc_buffer_clock);
     // DPRINTF(CC_Buffer_Flag, "pushed instruction name: %s\n", checkerInst.getStaticInst()->getName());
 
     // test for functional unit
-    debugStringMap[checkerInst.getStaticInst()->getName()] = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
-    int inst_latency = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
+    // debugStringMap[checkerInst.getStaticInst()->getName()] = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
+    // int inst_latency = functional_unit_pool->getOpLatency(checkerInst.getStaticInst()->opClass());
     // DPRINTF(CC_Buffer_Flag, "!!!!!!! ---------- Latency for operation is %d, cycle to execute is %lu --------- !!!!!!!!!\n", inst_latency, cc_buffer_clock + inst_latency);
 
 
@@ -398,14 +406,14 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     decode_buffer_credits.decrementCredit();
 
     //print buffer contents for debug
-    std::string decode_buffer_contents = "[";
-    for (auto it = decode_buffer.begin(); it != decode_buffer.end(); ++it) {
-        decode_buffer_contents += (*it).getStaticInst()->getName();
-        if (std::next(it) != decode_buffer.end()) {
-            decode_buffer_contents += ", ";
-        }
-    }
-    decode_buffer_contents += "]";
+    // std::string decode_buffer_contents = "[";
+    // for (auto it = decode_buffer.begin(); it != decode_buffer.end(); ++it) {
+    //     decode_buffer_contents += (*it).getStaticInst()->getName();
+    //     if (std::next(it) != decode_buffer.end()) {
+    //         decode_buffer_contents += ", ";
+    //     }
+    // }
+    // decode_buffer_contents += "]";
 
     // Output the buffer contents in one line
     // // DPRINTF(CC_Buffer_Flag, "\nCurrent num credits: %d, \nCurrent decode_buffer contents:\n %s\n", decode_buffer_current_credits, decode_buffer_contents.c_str());

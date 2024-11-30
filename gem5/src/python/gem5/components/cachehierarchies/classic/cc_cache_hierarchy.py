@@ -84,8 +84,8 @@ class CheckerCacheHierarchy(
 
         l1d_assoc: int = 8,
         l1i_assoc: int = 8,
-        l2_assoc: int = 16,
-        l3_assoc: int = 16, # new
+        l2_assoc: int = 32,
+        l3_assoc: int = 32, # new
         membus: BaseXBar = _get_default_membus.__func__(),
     ) -> None:
         """
@@ -113,6 +113,7 @@ class CheckerCacheHierarchy(
         )
 
         self.membus = membus
+        # self.membus.snoop_filter = SnoopFilter(entries=262144)
 
     #getting the overall cache hierarchy's memside and cpu side ports
     @overrides(AbstractClassicCacheHierarchy)

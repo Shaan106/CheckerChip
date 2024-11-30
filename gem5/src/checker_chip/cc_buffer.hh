@@ -84,7 +84,9 @@ class CC_Buffer : public ClockedObject
 
     // new credit system
     CheckerCreditSystem decode_buffer_credits; // Declare without parameters
+    // bool isDecodePipelined;
     CheckerCreditSystem execute_buffer_credits; // Declare without parameters
+    
 
     // cc_buffer_clock tracks how many cc_buffer clock cycles have occured
     unsigned long cc_buffer_clock;
@@ -98,6 +100,7 @@ class CC_Buffer : public ClockedObject
     // custom regfile
 
     CheckerRegfile checker_regfile;
+    // bool isRegfilePipelined;
 
     // testing/debug
     unsigned long instCount;
