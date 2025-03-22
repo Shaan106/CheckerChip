@@ -16,38 +16,38 @@ CC_BankUnit::~CC_BankUnit()
 
 bool CC_BankUnit::addPacket(PacketPtr pkt)
 {
-    if (packetQueue.size() >= maxQueueSize) {
+    if (mainQueue.size() >= maxMainQueueSize) {
         // Queue is full; cannot add the packet
         return false;
     } else {
-        packetQueue.push_back(pkt);
+        mainQueue.push_back(pkt);
         return true;
     }
 }
 
 PacketPtr CC_BankUnit::removePacket()
 {
-    if (packetQueue.empty()) {
+    if (mainQueue.empty()) {
         return nullptr;
     }
-    PacketPtr pkt = packetQueue.front();
-    packetQueue.pop_front();
+    PacketPtr pkt = mainQueue.front();
+    mainQueue.pop_front();
     return pkt;
 }
 
 bool CC_BankUnit::isEmpty() const
 {
-    return packetQueue.empty();
+    return mainQueue.empty();
 }
 
 size_t CC_BankUnit::getQueueSize() const
 {
-    return packetQueue.size();
+    return mainQueue.size();
 }
 
 size_t CC_BankUnit::getMaxQueueSize() const
 {
-    return maxQueueSize;
+    return maxMainQueueSize;
 }
 
 // void CC_BankUnit::regStats() 

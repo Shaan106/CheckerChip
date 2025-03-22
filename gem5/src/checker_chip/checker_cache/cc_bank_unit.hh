@@ -9,14 +9,25 @@
 #include "base/statistics.hh" //for custom stats
 
 #include "sim/clocked_object.hh"
+#include <array>
 
 namespace gem5 {
 
 class CC_BankUnit
 {
   private:
-    static const size_t maxQueueSize = 16; // TODO change
-    std::deque<PacketPtr> packetQueue;
+    // static const size_t maxQueueSize = 16; // TODO change
+    // std::deque<PacketPtr> packetQueue;
+
+    // one main queue
+    // num_cores queues for each core.
+
+    static const size_t numCores = 8;
+    static const size_t maxMainQueueSize = 16;
+    static const size_t maxCoreQueueSize = 8;
+
+    std::deque<PacketPtr> mainQueue;
+    std::array<std::deque<PacketPtr>, numCores> coreQueues;
 
   public:
     CC_BankUnit();
@@ -30,9 +41,6 @@ class CC_BankUnit
 
     size_t getMaxQueueSize() const;
 
-    // void regStats();
-
-    // statistics::Distribution bank_queue_occupancy_histogram;
 };
 
 } // namespace gem5
