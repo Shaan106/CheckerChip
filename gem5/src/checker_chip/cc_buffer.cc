@@ -65,8 +65,6 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
             16 //bandwidth
       ), //Checker regfile
 
-    //   isRegfilePipelined(true),
-
       tlb(params.tlbEntries, params.tlbAssociativity, params.tlbHitLatency, params.tlbMissLatency),
 
       instCount(0),

@@ -32,6 +32,9 @@ class CC_BankedCache : public Cache
     // Override the getPort method
     Port &getPort(const std::string &if_name, PortID idx = InvalidPortID) override;
 
+    // Make cc_dispatchEvent public so bank units can call it
+    void cc_dispatchEvent(unsigned bankId);
+
   // private:
     // EventFunctionWrapper freeBankClockEvent;
 
@@ -41,6 +44,12 @@ class CC_BankedCache : public Cache
   protected:
     // Number of banks
     unsigned numBanks;
+
+    // clock ratio between OOO and checker clock (OOO fq/ checker fq)
+    static const unsigned checkerClockRatio = 4;
+
+    // this is called every clock cycle, does things such as updating each bank
+    void clock_update();
 
     // checker chip additional structures around banks
     std::vector<CC_BankUnit> bankUnits;
@@ -58,9 +67,6 @@ class CC_BankedCache : public Cache
     //cc_cache_controller - takes in packets and puts them into
     // the appropriate bank queue
     bool cc_cacheController(PacketPtr pkt);
-
-    //free a certain bank after some set delay
-    void cc_dispatchEvent(unsigned bankId); 
 
     //free a certain bank after some set delay
     void freeBank(unsigned bankID); 

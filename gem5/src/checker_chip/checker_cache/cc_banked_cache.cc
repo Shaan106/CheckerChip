@@ -30,13 +30,37 @@ CC_BankedCache::CC_BankedCache(const CC_BankedCacheParams &p)
 
     // Initialize bank units
     bankUnits.resize(numBanks);
+    
+    // Set parent cache pointer for each bank unit
+    for (unsigned i = 0; i < numBanks; ++i) {
+        bankUnits[i].setParentCache(this, i);
+    }
 
     bank_queue_occupancy_histogram_arr.resize(numBanks);
 
     // Initialize bankFreeList with all entries set to true
     bankFreeList = std::vector<bool>(numBanks, true);
 
-    // bank_queue_occupancy_histogram_arr.reserve(numBanks);
+    // schedule initial clock_update
+    schedule(new EventFunctionWrapper(
+        [this]() { clock_update(); }, name() + ".clock_update", true), 
+        clockEdge(Cycles(1 * checkerClockRatio)));
+}
+
+void CC_BankedCache::clock_update()
+{
+    // TODO: implement this
+
+    // go over every bank and (TODO: make this function) call the bank's clock_update()
+    for (unsigned i = 0; i < numBanks; ++i) {
+        bankUnits[i].clock_update();
+    }
+
+    // schedule next clock_update in 1 checker clock cycle
+    schedule(new EventFunctionWrapper(
+        [this]() { clock_update(); }, name() + ".clock_update", true), 
+        clockEdge(Cycles(1 * checkerClockRatio)));
+
 }
 
 void CC_BankedCache::regStats()
@@ -154,7 +178,7 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
     // Access the custom state
     CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
     if (state) {
-        DPRINTF(CC_BankedCache, "Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
+        DPRINTF(CC_BankedCache, "Sending Core ID: %d | Tag: %s\n", state->senderCoreID, state->tag.c_str());
     } else {
         DPRINTF(CC_BankedCache, "No Custom State found for Packet ID: %lu\n", pkt->id);
     }
@@ -209,15 +233,19 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
 
     unsigned bankId = calculateBankId(pkt->getAddr());
 
-    bool bankUnitSuccess = bankUnits[bankId].addPacket(pkt);
+    CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+
+    bool bankUnitSuccess = bankUnits[bankId].addPacket(pkt, cc_packet_state->senderCoreID);
 
     if (bankUnitSuccess) {
         DPRINTF(CC_BankedCache, "Packet added to bank %d\n", bankId);
 
+        // TODO: cc_dispatchEvent() is wrong, this should be called from the bank unit every cycle, not here.
+
         // next "checker" clock cycle, cycle through queues to send packets to banks
-        schedule(new EventFunctionWrapper(
-        [this, bankId]() { cc_dispatchEvent(bankId); }, name() + ".cc_dispatchEvent", true), 
-        clockEdge(Cycles(12))); // TODO: latency from entry to dispatch to mem
+        // schedule(new EventFunctionWrapper(
+        // [this, bankId]() { cc_dispatchEvent(bankId); }, name() + ".cc_dispatchEvent", true), 
+        // clockEdge(Cycles(12))); // TODO: latency from entry to dispatch to mem
 
     } else {
         DPRINTF(CC_BankedCache, "Failed to add packet to bank %d: Queue is full\n", bankId);
@@ -237,23 +265,26 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
 void 
 CC_BankedCache::cc_dispatchEvent(unsigned bankId) 
 {
-    //bankId is which bank to send packet from
-    // go over every bank and if not empty, send to bank to deal with req
-    // for (int i = 0; i < numBanks; ++i) {
-    //     bank_queue_occupancy_histogram_arr[i]->sample(bankUnits[i].getQueueSize());
-    //     if (!bankUnits[i].isEmpty()) {
-    //         PacketPtr pkt = bankUnits[i].removePacket();
-    //         recvTimingReq(pkt);
-    //     }
-    //     DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", i,  static_cast<unsigned>(bankUnits[i].getQueueSize()));
-    // }
+
+
+    // new: this is now called from the bank unit every cycle
+
+    DPRINTF(CC_BankedCache, "cc_dispatchEvent called for bank %d\n", bankId);
+
 
     bank_queue_occupancy_histogram_arr[bankId]->sample(bankUnits[bankId].getQueueSize());
-    if (!bankUnits[bankId].isEmpty()) {
-        PacketPtr pkt = bankUnits[bankId].removePacket();
-        recvTimingReq(pkt);
-    }
-    DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", bankId,  static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
+
+    // // TODO: need to add occupancy, isEmpty only works for core queues
+    // if (!bankUnits[bankId].isEmpty()) {
+    //     PacketPtr pkt = bankUnits[bankId].removePacket();
+    //     recvTimingReq(pkt);
+    // } else {
+    //     schedule(new EventFunctionWrapper(
+    //     [this, bankId]() { cc_dispatchEvent(bankId); }, name() + ".cc_dispatchEvent", true), 
+    //     clockEdge(Cycles(4)));
+    //     DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d is empty, rescheduling\n", bankId);
+    // }
+    // DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", bankId,  static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
     
 }
 
@@ -372,7 +403,7 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
         blk->setCoherenceBits(CacheBlk::WritableBit);
     }
 
-    // CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    // CC_PacketState *state = static_cast<CC_PacketState *>(pkt->senderState);
     // if (state) {
     //     DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq| Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
     //     // Drop the packet after processing
@@ -398,7 +429,7 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
         doWritebacks(writebacks, clockEdge(lat + forwardLatency));
     }
 
-    // CC_PacketState *state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    // CC_PacketState *state = static_cast<CC_PacketState *>(pkt->senderState);
     // DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq| Custom Info: %d | Tag: %s\n", state->customInfo, state->tag.c_str());
 
     if (cc_packet_state) {
