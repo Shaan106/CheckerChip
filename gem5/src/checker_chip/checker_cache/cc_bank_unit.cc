@@ -41,7 +41,10 @@ bool CC_BankUnit::addPacket(PacketPtr pkt, int senderCoreID)
         return false;
     } else {
         DPRINTF(CC_BankedCache, "Adding packet to main queue. senderCoreID: %d\n", senderCoreID);
-        mainQueue.push_back(std::make_tuple(pkt, senderCoreID));
+
+        bool isReady = true; // true for now, but will need to be changed based on LD/ST commit/ST complete
+
+        mainQueue.push_back(std::make_tuple(pkt, senderCoreID, isReady));
         return true;
     }
 }
@@ -62,7 +65,7 @@ void CC_BankUnit::updateCoreQueues()
         
         PacketPtr pkt = std::get<0>(mainQueue.front());
         int senderCoreID = std::get<1>(mainQueue.front());
-
+        bool isReady = std::get<2>(mainQueue.front());
         if (coreQueues[senderCoreID].size() < maxCoreQueueSize) {
             totalCoreQueueSize++;
             DPRINTF(CC_BankedCache, "Adding packet to core queue %d\n", senderCoreID);
@@ -73,12 +76,6 @@ void CC_BankUnit::updateCoreQueues()
 }
 
 void CC_BankUnit::retireFromCoreQueue() {
-    // Print size of each core queue
-    // for (int i = 0; i < numCores; i++) {
-    //     DPRINTF(CC_BankedCache, "Core %d queue size: %lu\n", i, coreQueues[i].size());
-    // }
-
-    // loop over all core queues, and remove the first ready packet
 
     // randomly choose a core between 0 and numCores - 1 
     int coreToCheck = rand() % numCores;
@@ -89,10 +86,17 @@ void CC_BankUnit::retireFromCoreQueue() {
         int currentCore = (coreToCheck + i) % numCores;
         
         if (!coreQueues[currentCore].empty()) {
-            PacketPtr pkt = std::get<0>(coreQueues[currentCore].front());
-            coreQueues[currentCore].pop_front();
-            totalCoreQueueSize--;
-            parentCache->cc_dispatchFromCoreQueue(pkt);
+            PacketPtr pkt = std::get<0>(coreQueues[currentCore].front());\
+
+            // check if packet is ready to be retired
+            bool isReady = std::get<2>(coreQueues[currentCore].front());
+
+            if (isReady) {
+                coreQueues[currentCore].pop_front();
+                totalCoreQueueSize--;
+                parentCache->cc_dispatchFromCoreQueue(pkt);
+                return;
+            }
         }
     }
 
