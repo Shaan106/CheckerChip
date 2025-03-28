@@ -58,10 +58,10 @@ class CC_BankUnit
     
     bool addPacket(PacketPtr pkt, int senderCoreID); // add packet to main queue
     void updateCoreQueues(); // add packet to corresponding core queue
-    PacketPtr removePacket();
+    void retireFromCoreQueue();
 
     bool isEmpty() const;
-    size_t getQueueSize() const; // Function to get current queue size
+    size_t getMainQueueSize() const; // Function to get current queue size
 
     size_t getMaxQueueSize() const;
 };

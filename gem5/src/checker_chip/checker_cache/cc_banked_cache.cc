@@ -257,35 +257,19 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
         // bool tmpSuccess = bankUnits[bankId].addPacket(pkt);
     }
 
-    DPRINTF(CC_BankedCache, "Queue Size: %u\n", static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
+    DPRINTF(CC_BankedCache, "Queue Size: %u\n", static_cast<unsigned>(bankUnits[bankId].getMainQueueSize()));
 
     return bankUnitSuccess; // TODO: need to change this to only return true if we can add to a queue (leads to stalling in buffer)
 }
 
 void 
-CC_BankedCache::cc_dispatchEvent(unsigned bankId) 
-{
+CC_BankedCache::cc_dispatchFromCoreQueue(PacketPtr pkt) {
+    // TODO: implement
 
+    //debug statement for now
+    DPRINTF(CC_BankedCache, "cc_dispatchFromCoreQueue called for packet ID: %lu\n", pkt->id);
 
-    // new: this is now called from the bank unit every cycle
-
-    DPRINTF(CC_BankedCache, "cc_dispatchEvent called for bank %d\n", bankId);
-
-
-    bank_queue_occupancy_histogram_arr[bankId]->sample(bankUnits[bankId].getQueueSize());
-
-    // // TODO: need to add occupancy, isEmpty only works for core queues
-    // if (!bankUnits[bankId].isEmpty()) {
-    //     PacketPtr pkt = bankUnits[bankId].removePacket();
-    //     recvTimingReq(pkt);
-    // } else {
-    //     schedule(new EventFunctionWrapper(
-    //     [this, bankId]() { cc_dispatchEvent(bankId); }, name() + ".cc_dispatchEvent", true), 
-    //     clockEdge(Cycles(4)));
-    //     DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d is empty, rescheduling\n", bankId);
-    // }
-    // DPRINTF(CC_BankedCache, "cc_dispatchEvent queue %d Size: %u\n", bankId,  static_cast<unsigned>(bankUnits[bankId].getQueueSize()));
-    
+    recvTimingReq(pkt);
 }
 
 

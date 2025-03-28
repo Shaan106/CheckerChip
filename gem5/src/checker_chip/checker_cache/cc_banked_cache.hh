@@ -32,9 +32,8 @@ class CC_BankedCache : public Cache
     // Override the getPort method
     Port &getPort(const std::string &if_name, PortID idx = InvalidPortID) override;
 
-    // Make cc_dispatchEvent public so bank units can call it
-    void cc_dispatchEvent(unsigned bankId);
-
+    // cc_dispatchFromCoreQueue public so bank units can call it
+    void cc_dispatchFromCoreQueue(PacketPtr pkt);
   // private:
     // EventFunctionWrapper freeBankClockEvent;
 

@@ -18,14 +18,14 @@ CC_BankUnit::~CC_BankUnit()
 
 void CC_BankUnit::clock_update()
 {
-    DPRINTF(CC_BankedCache, "Clock update called\n");
+    // this is called every checker clock cycle from cc_banked_cache
+    
 
-    // update core queues
-    updateCoreQueues();
+    updateCoreQueues(); //this adds packets from main queue to core queues
 
-    // If we have a parent cache, call cc_dispatchEvent
+    
     if (parentCache) {
-        parentCache->cc_dispatchEvent(bankId);
+        retireFromCoreQueue(); // this checks if any packets are ready to be retired, and retires them
     } else {
         DPRINTF(CC_BankedCache, "ERROR: No parent cache found\n");
     }
@@ -72,25 +72,17 @@ void CC_BankUnit::updateCoreQueues()
     }
 }
 
-PacketPtr CC_BankUnit::removePacket()
-{
-
-    // TODO:  this needs to be called every cycle, and send things to cc_banked_cache, not just called from cc_banked_cache
-
-    
-    // TODO: make this algorithm smarter/fairer
-    // TODO: deal with loads seperately - they can skip the per core queues
-    
+void CC_BankUnit::retireFromCoreQueue() {
     // Print size of each core queue
-    for (int i = 0; i < numCores; i++) {
-        DPRINTF(CC_BankedCache, "Core %d queue size: %lu\n", i, coreQueues[i].size());
-    }
+    // for (int i = 0; i < numCores; i++) {
+    //     DPRINTF(CC_BankedCache, "Core %d queue size: %lu\n", i, coreQueues[i].size());
+    // }
 
     // loop over all core queues, and remove the first ready packet
 
     // randomly choose a core between 0 and numCores - 1 
-    // int coreToCheck = rand() % numCores;
-    int coreToCheck = 0;
+    int coreToCheck = rand() % numCores;
+    // int coreToCheck = 0;
 
     // loop over all numCores core queues, starting from coreToCheck
     for (int i = 0; i < numCores; i++) {
@@ -100,14 +92,14 @@ PacketPtr CC_BankUnit::removePacket()
             PacketPtr pkt = std::get<0>(coreQueues[currentCore].front());
             coreQueues[currentCore].pop_front();
             totalCoreQueueSize--;
-            return pkt;
+            parentCache->cc_dispatchFromCoreQueue(pkt);
         }
     }
 
-    DPRINTF(CC_BankedCache, "No packet found in any core queue\n");
+    // DPRINTF(CC_BankedCache, "No packet found in any core queue\n");s
 
-    return nullptr;
 }
+
 
 bool CC_BankUnit::isEmpty() const
 {
@@ -130,7 +122,7 @@ bool CC_BankUnit::isEmpty() const
     }
 }
 
-size_t CC_BankUnit::getQueueSize() const
+size_t CC_BankUnit::getMainQueueSize() const
 {
     return mainQueue.size();
 }
