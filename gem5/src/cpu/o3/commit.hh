@@ -114,13 +114,10 @@ class Commit
         SquashAfterPending, //< Committing instructions before a squash.
     };
 
-  private:
-
-    /* TAG test message */
-    // std::string message;
-
-    /* TAG define cc_buffer*/
+  public:
     CC_Buffer* cc_buffer;
+
+  private:
 
     /** Overall commit status. */
     CommitStatus _status;

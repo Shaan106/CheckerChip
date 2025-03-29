@@ -588,8 +588,10 @@ class CPU : public BaseCPU
     void htmSendAbortSignal(ThreadID tid, uint64_t htm_uid,
                             HtmFailureFaultCause cause) override;
 
-    // Checker chip buffer
-    CC_Buffer *cc_buffer;
+    /** Handle store completion in the checker chip */
+    void handleStoreComplete(const DynInstPtr &inst) {
+        commit.cc_buffer->handleStoreComplete(inst);
+    }
 };
 
 } // namespace o3
