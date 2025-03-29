@@ -382,6 +382,10 @@ CC_Buffer::pushCommit(const gem5::o3::DynInstPtr &instName)
     // convert instruction into custom checker type
     CheckerInst checkerInst = instantiateObject(instName);
 
+    if (checkerInst.isWriteInst()) {
+        DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store commit: %s, seqNum: %llu, is write\n", checkerInst.getStaticInst()->getName(), checkerInst.uniqueInstSeqNum);
+    }
+
     // set verification bits for all things not implemented yet
     checkerInst.iVerify_bit = true;
 
@@ -797,8 +801,17 @@ CC_Buffer::handleStoreComplete(const gem5::o3::DynInstPtr &inst)
     checkerInst.memVerify_bit = true;
 
     // print for now
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu\n", 
-            inst->staticInst->getName(), inst->seqNum);
+    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu\n", 
+    //         inst->staticInst->getName(), inst->seqNum);
+
+    // print if this falls into isread or iswrite
+    if (checkerInst.isReadInst()) {
+        DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu, is read\n", inst->staticInst->getName(), checkerInst.uniqueInstSeqNum);
+    } else if (checkerInst.isWriteInst()) {
+        DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu, is write\n", inst->staticInst->getName(), checkerInst.uniqueInstSeqNum);
+    } else {
+        DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu, is unknown\n", inst->staticInst->getName(), checkerInst.uniqueInstSeqNum);
+    }
     
    // add to decode buffer
 //    decode_buffer.push_back(checkerInst);
