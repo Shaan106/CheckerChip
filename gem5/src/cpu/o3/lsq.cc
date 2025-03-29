@@ -420,7 +420,7 @@ LSQ::recvTimingResp(PacketPtr pkt)
                 request->instruction()->seqNum);
         
         // Call cc_buffer to handle store complete
-        cpu->handleStoreComplete(request->instruction());
+        cpu->cc_handleStoreComplete(request->instruction());
     }
 
     thread[cpu->contextToThread(request->contextId())].recvTimingResp(pkt);

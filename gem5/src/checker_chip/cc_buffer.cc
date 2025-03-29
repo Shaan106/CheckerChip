@@ -797,7 +797,8 @@ CC_Buffer::handleStoreComplete(const gem5::o3::DynInstPtr &inst)
     checkerInst.memVerify_bit = true;
 
     // print for now
-    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s\n", inst->staticInst->getName());
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu\n", 
+            inst->staticInst->getName(), inst->seqNum);
     
    // add to decode buffer
 //    decode_buffer.push_back(checkerInst);

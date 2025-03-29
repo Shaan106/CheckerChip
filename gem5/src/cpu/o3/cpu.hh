@@ -589,7 +589,7 @@ class CPU : public BaseCPU
                             HtmFailureFaultCause cause) override;
 
     /** Handle store completion in the checker chip */
-    void handleStoreComplete(const DynInstPtr &inst) {
+    void cc_handleStoreComplete(const DynInstPtr &inst) {
         commit.cc_buffer->handleStoreComplete(inst);
     }
 };
