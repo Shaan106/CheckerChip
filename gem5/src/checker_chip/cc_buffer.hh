@@ -250,6 +250,8 @@ class CC_Buffer : public ClockedObject
 
     statistics::Distribution execute_buffer_occupancy_histogram;
 
+    // Add new function to handle store completes
+    void handleStoreComplete(const gem5::o3::DynInstPtr &inst);
     
 };
 

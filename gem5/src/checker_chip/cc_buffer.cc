@@ -1,4 +1,3 @@
-
 #include "checker_chip/cc_buffer.hh"
 
 #include "base/trace.hh"
@@ -579,7 +578,7 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
         pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
                                               memInst.uniqueInstSeqNum, //unique identifier for verification on return
                                               42, // custom info
-                                              "CustomTag" //custom info
+                                              "ReadReq" //custom info
                                               );
 
         // Send the packet
@@ -630,7 +629,7 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
                                         memInst.uniqueInstSeqNum, //unique identifier for return
                                         42, // custom info
-                                        "CustomTag" //custom info
+                                        "WriteReq" //custom info
                                         );
 
         // Copy the data for the current packet
@@ -781,5 +780,28 @@ CC_Buffer::CC_MemSidePort::recvRangeChange()
     // For simplicity, we ignore range changes
 }
 
+void
+CC_Buffer::handleStoreComplete(const gem5::o3::DynInstPtr &inst)
+{
+    if (!isCheckerActive) {
+        return;
+    }
+
+    // Convert instruction into custom checker type
+    CheckerInst checkerInst = instantiateObject(inst);
+    
+    // Set verification bits
+    // TODO: check if verification bits are fine to be true at all times
+    checkerInst.iVerify_bit = true;
+    checkerInst.execVerify_bit = true;
+    checkerInst.memVerify_bit = true;
+
+    // print for now
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s\n", inst->staticInst->getName());
+    
+   // add to decode buffer
+//    decode_buffer.push_back(checkerInst);
+//    decode_buffer_credits.decrementCredit();
+}
 
 } // namespace gem5

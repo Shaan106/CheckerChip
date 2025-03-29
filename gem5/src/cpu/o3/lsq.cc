@@ -261,15 +261,9 @@ void
 LSQ::commitStores(InstSeqNum &youngest_inst, ThreadID tid)
 {
     thread.at(tid).commitStores(youngest_inst);
-
-    // TAG:
-    // printing when committing stores
-    // TODO: need to figure out whether this aligns with commit to the CC_buffer
-
-    // DPRINTF(CC_Memory, "Commit store seq:%lu addr:%#lx\n",
-    //     youngest_inst, thread[tid].storeQueue[store_head].inst->effAddr);
-
-    DPRINTF(CC_Memory, "Commit store\n");
+    
+    // Print debug info for store commit with cutoff sequence number
+    DPRINTF(CC_Memory, "Store commit - youngest_inst cutoff: %llu\n", youngest_inst);
 }
 
 void
@@ -420,15 +414,14 @@ LSQ::recvTimingResp(PacketPtr pkt)
     LSQRequest *request = dynamic_cast<LSQRequest*>(pkt->senderState);
     panic_if(!request, "Got packet back with unknown sender state\n");
 
-    // TAG:
-    // checking completion timing packet
-    // if (pkt->isWrite()) {
-    //     DPRINTF(CC_Memory, "Complete store seq:%lu va:%#lx pa:%#lx\n",
-    //             req->instruction()->seqNum,
-    //             req->req()->getVaddr(),
-    //             pkt->getAddr());
-    // }
-    DPRINTF(CC_Memory, "Complete memreq\n");
+    // Print debug info for store completion with specific store's sequence number
+    if (pkt->isWrite()) {
+        DPRINTF(CC_Memory, "Store complete - store seqNum: %llu\n", 
+                request->instruction()->seqNum);
+        
+        // Call cc_buffer to handle store complete
+        cpu->cc_buffer->handleStoreComplete(request->instruction());
+    }
 
     thread[cpu->contextToThread(request->contextId())].recvTimingResp(pkt);
 
