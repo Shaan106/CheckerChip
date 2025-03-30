@@ -18,6 +18,7 @@ CheckerInst::CheckerInst(unsigned long instDecodeCycle,
       iVerify_bit(false),
       execVerify_bit(false),
       memVerify_bit(false),
+      isWriteComplete_bit(false),
       staticInst(staticInst),
       functional_unit_index(-1) {}
 
@@ -41,6 +42,10 @@ bool CheckerInst::isReadInst() const {
 bool CheckerInst::isWriteInst() const {
   gem5::OpClass op_class = staticInst->opClass();
   return (op_class == gem5::MemWriteOp || op_class == gem5::FloatMemWriteOp);
+}
+
+bool CheckerInst::isWriteCompleteInst() const {
+  return isWriteComplete_bit;
 }
 
 void CheckerInst::setMemAddresses(gem5::Addr virt_addr, gem5::Addr phys_addr, unsigned mem_data_size, uint8_t* mem_data_pointer) {

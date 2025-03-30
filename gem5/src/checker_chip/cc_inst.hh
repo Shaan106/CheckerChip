@@ -48,6 +48,9 @@ public:
     //bool to check if mem was verified
     bool memVerify_bit;
 
+    //bool to check if write complete inst
+    bool isWriteComplete_bit;
+
     //which functional unit is executing this instruction, used to free fu when done
     int functional_unit_index; 
 
@@ -70,6 +73,9 @@ public:
 
     // return true if store inst
     bool isWriteInst() const;
+
+    // return true if write complete inst
+    bool isWriteCompleteInst() const;
 
     // function to set v_addr and p_addr if inst is mem_inst
     void setMemAddresses(gem5::Addr virt_addr, 

@@ -203,6 +203,11 @@ class CC_Buffer : public ClockedObject
     bool sendWriteReqPacket(CheckerInst memInst);
 
     /**
+     * Method to create and send a writeComplete packet through cc_mem_side_port.
+     */
+    bool sendWriteCompletePacket(CheckerInst memInst);
+
+    /**
      * Called by an outside object. Starts off the events to fill the buffer
      * with a goodbye message.
      *

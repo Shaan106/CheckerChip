@@ -3,6 +3,7 @@
 #include "checker_chip/checker_cache/cc_bank_unit.hh"
 #include "checker_chip/checker_cache/cc_banked_cache.hh"
 #include "debug/CC_BankedCache.hh"
+#include "checker_chip/checker_cache/checker_packet_state.hh"
 
 namespace gem5 {
 
@@ -42,21 +43,50 @@ bool CC_BankUnit::addPacket(PacketPtr pkt, int senderCoreID)
     } else {
         DPRINTF(CC_BankedCache, "Adding packet to main queue. senderCoreID: %d\n", senderCoreID);
 
-        bool isReady = true; // true for now, but will need to be changed based on LD/ST commit/ST complete
+        CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
 
-        mainQueue.push_back(std::make_tuple(pkt, senderCoreID, isReady));
+        uint64_t uniqueInstSeqNum = cc_packet_state->uniqueInstSeqNum;
+
+        bool isReady;
+
+        // check type of packet
+        if (cc_packet_state) {
+            if (cc_packet_state->storeType == StoreType::commit) {
+                DPRINTF(CC_BankedCache, "CC_BankUnit: Processing commit packet, uniqueInstSeqNum: %llu\n", uniqueInstSeqNum);
+                // Handle commit packet
+                isReady = false;
+            } else if (cc_packet_state->storeType == StoreType::complete) {
+                DPRINTF(CC_BankedCache, "CC_BankUnit: Processing complete packet, uniqueInstSeqNum: %llu\n", uniqueInstSeqNum);
+                // Handle complete packet
+                isReady = true;
+            } else if (cc_packet_state->storeType == StoreType::non_store) {
+                DPRINTF(CC_BankedCache, "CC_BankUnit: Processing non-store packet, uniqueInstSeqNum: %llu\n", uniqueInstSeqNum);
+                // Handle non-store packet
+                isReady = true;
+            } else {
+                DPRINTF(CC_BankedCache, "ERROR:CC_BankUnit: Unknown packet type, uniqueInstSeqNum: %llu\n", uniqueInstSeqNum);
+                // print more info about the packet
+                // DPRINTF(CC_BankedCache, "Packet type: %d\n", cc_packet_state->storeType);
+                DPRINTF(CC_BankedCache, "Packet: %s\n", pkt->print());
+
+                return false;
+            }
+        } else {
+            DPRINTF(CC_BankedCache, "ERROR: CC_BankUnit: No packet state found\n");
+            return false;
+        }
+
+        mainQueue.push_back(std::make_tuple(pkt, senderCoreID, uniqueInstSeqNum, isReady));
+        
         return true;
     }
 }
 
 void CC_BankUnit::updateCoreQueues()
 {
-
-    //  TODO: need to update, this needs to be called every cycle
-
-
     // if main queue is not empty, take first packet and add to corresponding core queue
-    // also, need to check if core queues are full
+    
+    //  TODO: need to update, this needs to be called every cycle
 
     // TODO: loads can skip the per core queues
 
@@ -65,17 +95,54 @@ void CC_BankUnit::updateCoreQueues()
         
         PacketPtr pkt = std::get<0>(mainQueue.front());
         int senderCoreID = std::get<1>(mainQueue.front());
-        bool isReady = std::get<2>(mainQueue.front());
+        // bool isReady = std::get<2>(mainQueue.front());
+        uint64_t uniqueInstSeqNum = std::get<2>(mainQueue.front());
+
+        CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+
         if (coreQueues[senderCoreID].size() < maxCoreQueueSize) {
-            totalCoreQueueSize++;
-            DPRINTF(CC_BankedCache, "Adding packet to core queue %d\n", senderCoreID);
-            coreQueues[senderCoreID].push_back(mainQueue.front());
-            mainQueue.pop_front();
+
+            // if store type is commit, add to core queue
+            if (cc_packet_state->storeType == StoreType::commit) {
+                totalCoreQueueSize++;
+                DPRINTF(CC_BankedCache, "ST::commit in core queue %d\n", senderCoreID);
+                coreQueues[senderCoreID].push_back(mainQueue.front());
+                mainQueue.pop_front();
+            
+            // if store type is complete, release packet in relevant core queue (set isReady to true)
+            } else if (cc_packet_state->storeType == StoreType::complete) {
+                DPRINTF(CC_BankedCache, "ST::complete in core queue %d\n", senderCoreID);
+                
+                // get unique instruction ID from packet
+                uint64_t uniqueInstSeqNum = cc_packet_state->uniqueInstSeqNum;
+
+                // check if uniqueInstSeqNum is in the relevant core queue
+                for (auto &packet : coreQueues[senderCoreID]) { // loop over all packets in the core queue
+                    if (std::get<2>(packet) == uniqueInstSeqNum) { // if coreQueue[senderCoreID][i].uniqueInstSeqNum == uniqueInstSeqNum
+                        std::get<3>(packet) = true; // set isReady to true
+                    }
+                }
+
+                mainQueue.pop_front();
+            // if store type is non-store, then continue for now (no need to add to core queue)
+            } else if (cc_packet_state->storeType == StoreType::non_store) {
+                // TODO: loads don't need to be added to core queues
+                totalCoreQueueSize++;
+                DPRINTF(CC_BankedCache, "LD::non_store in core queue %d\n", senderCoreID);
+                coreQueues[senderCoreID].push_back(mainQueue.front());
+                mainQueue.pop_front();        
+            }
+
         }
     }
 }
 
 void CC_BankUnit::retireFromCoreQueue() {
+
+    // print all core queue sizes
+    // for (int i = 0; i < numCores; i++) {
+    //     DPRINTF(CC_BankedCache, "Core queue %d size: %d\n", i, coreQueues[i].size());
+    // }
 
     // randomly choose a core between 0 and numCores - 1 
     int coreToCheck = rand() % numCores;
@@ -86,10 +153,11 @@ void CC_BankUnit::retireFromCoreQueue() {
         int currentCore = (coreToCheck + i) % numCores;
         
         if (!coreQueues[currentCore].empty()) {
-            PacketPtr pkt = std::get<0>(coreQueues[currentCore].front());\
+            PacketPtr pkt = std::get<0>(coreQueues[currentCore].front());
 
             // check if packet is ready to be retired
-            bool isReady = std::get<2>(coreQueues[currentCore].front());
+            // bool isReady = std::get<3>(coreQueues[currentCore].front());
+            bool isReady = true;
 
             if (isReady) {
                 coreQueues[currentCore].pop_front();

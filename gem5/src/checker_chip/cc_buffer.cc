@@ -70,7 +70,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
       debugStringMap({}),
       cc_mem_side_port(name() + ".cc_mem_side_port", this), // for ports
       system(params.system), // Initialize the system pointer
-      requestorId(1000),
+      requestorId(0),
       memVerifyAddrSet()
 {
     // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Constructor called\n");
@@ -94,7 +94,8 @@ CC_Buffer::init()
     ClockedObject::init();
 
     // Obtain the RequestorID
-    requestorId = system->getRequestorId(this);
+    // TODO: maybe this is not meant to be -53, messes up the memory side port for cache?
+    requestorId = system->getRequestorId(this) - 53; // -53 because requestorIDs were 53-60 experimentally
 
     // You can add any additional initialization here
 }
@@ -293,12 +294,22 @@ CC_Buffer::updateExecuteBufferContents()
 
                     // sendDummyPacket();
                 } else if (it->isWriteInst()) {
-                    // DPRINTF(CC_Buffer_Flag, "A memory write operation, sending MemWritePacket, memVerifyAddrSet.size(): %d.\n", memVerifyAddrSet.size());
-                    // it->execVerify_bit = true; // no need for exec verify, so set true now
-                    // it->instExecuteCycle = cc_buffer_clock;
-                    // sendWriteReqPacket(*it);
+                    
+                    // if it is a write complete inst
+                    if (it->isWriteCompleteInst()) {
+                        // it->execVerify_bit = true;
+                        // it->instExecuteCycle = cc_buffer_clock;
+                        // sendWriteCompletePacket(*it);
 
-                    if (sendWriteReqPacket(*it)) { // if able to send inst to mem (buffer not full)
+                        if (sendWriteCompletePacket(*it)) {
+                            it->execVerify_bit = true;
+                            it->instExecuteCycle = cc_buffer_clock;
+                        } else {
+                            // DPRINTF(CC_Buffer_Flag, "Failed to send write complete packet.\n");
+                            it->instInFU = false;
+                        }
+
+                    } else if (sendWriteReqPacket(*it)) { // if able to send inst to mem (buffer not full)
                         it->execVerify_bit = true;
                         it->instExecuteCycle = cc_buffer_clock;
                     } else {
@@ -433,7 +444,6 @@ CC_Buffer::instantiateObject(const gem5::o3::DynInstPtr &instName)
     
     Addr inst_addr = instName->pcState().instAddr();
     unsigned int tlb_latency = tlb.translate(inst_addr);
-
     // DPRINTF(CC_Buffer_Flag, " inst->seqNum : %lu\n", instName->seqNum);
 
     // Create a CheckerInst object with credits as the parameter
@@ -579,10 +589,11 @@ CC_Buffer::sendReadReqPacket(CheckerInst memInst)
         RequestPtr req = std::make_shared<Request>(addr, currSize, 0, requestorId);
         PacketPtr pkt = new Packet(req, MemCmd::ReadReq);
         pkt->allocate();
-        pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
+        pkt->senderState = new CC_PacketState(requestorId, //coreID (requestorIDs were 53-60 experimentally)
                                               memInst.uniqueInstSeqNum, //unique identifier for verification on return
                                               42, // custom info
-                                              "ReadReq" //custom info
+                                              "ReadReq", //custom info
+                                              StoreType::non_store // store type
                                               );
 
         // Send the packet
@@ -630,10 +641,11 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
         pkt->allocate();
 
-        pkt->senderState = new CC_PacketState(requestorId-53, //coreID (requestorIDs were 53-60 experimentally)
+        pkt->senderState = new CC_PacketState(requestorId, //coreID (requestorIDs were 53-60 experimentally)
                                         memInst.uniqueInstSeqNum, //unique identifier for return
                                         42, // custom info
-                                        "WriteReq" //custom info
+                                        "WriteReq", //custom info
+                                        StoreType::commit // store type
                                         );
 
         // Copy the data for the current packet
@@ -646,6 +658,62 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         if (!sendSuccess) {
             bank_queue_full_block++;
             DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendWriteReqPacket).\n");
+        }
+
+        // Update the address, data pointer, and remaining size
+        addr += currSize;
+        data_ptr += currSize;
+        remaining -= currSize;
+
+        return sendSuccess;
+    }
+}
+
+bool
+CC_Buffer::sendWriteCompletePacket(CheckerInst memInst)
+{
+    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Creating and sending write request packet(s) for address 0x%x, size %d.\n", memInst.p_addr, memInst.mem_access_data_size);
+
+    Addr addr = memInst.p_addr; // Starting address of the write request
+
+    // no need to insert into memVerifyAddrSet, because we are sending write complete packet
+    // memVerifyAddrSet.insert(memInst.uniqueInstSeqNum);
+
+    unsigned size = memInst.mem_access_data_size; // Total size of the data to write
+    unsigned blkSize = cc_mem_side_port.getCacheBlockSize(); // Cache block size
+    unsigned remaining = size;
+
+    const uint8_t *data_ptr = memInst.mem_access_data_ptr;
+
+    while (remaining > 0) {
+        // Calculate the size for the current packet
+        unsigned offset = addr % blkSize;
+        unsigned currSize = std::min(remaining, blkSize - offset);
+
+        // Create a request for the current packet
+        RequestPtr req = std::make_shared<Request>(addr, currSize, 0, requestorId);
+
+        // Create a WriteReq packet
+        PacketPtr pkt = new Packet(req, MemCmd::WriteReq);
+        pkt->allocate();
+
+        pkt->senderState = new CC_PacketState(requestorId, //coreID (requestorIDs were 53-60 experimentally)
+                                        memInst.uniqueInstSeqNum, //unique identifier for return
+                                        42, // custom info
+                                        "WriteComplete", //custom info
+                                        StoreType::complete // store type
+                                        );
+
+        // Copy the data for the current packet
+        uint8_t *pktData = pkt->getPtr<uint8_t>();
+        memcpy(pktData, data_ptr, currSize);
+
+        // Send the packet
+        // DPRINTF(CC_Buffer_Flag, "Sending write packet: addr = 0x%x, size = %d, offset = %d\n", addr, currSize, offset);
+        bool sendSuccess = cc_mem_side_port.sendPacket(pkt);
+        if (!sendSuccess) {
+            bank_queue_full_block++;
+            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendWriteCompletePacket).\n");
         }
 
         // Update the address, data pointer, and remaining size
@@ -793,29 +861,28 @@ CC_Buffer::handleStoreComplete(const gem5::o3::DynInstPtr &inst)
 
     // Convert instruction into custom checker type
     CheckerInst checkerInst = instantiateObject(inst);
+
+    // set isWriteCompleteInst to true
+    checkerInst.isWriteComplete_bit = true;
     
     // Set verification bits
     // TODO: check if verification bits are fine to be true at all times
     checkerInst.iVerify_bit = true;
-    checkerInst.execVerify_bit = true;
-    checkerInst.memVerify_bit = true;
+    // checkerInst.execVerify_bit = false;
+    // checkerInst.memVerify_bit = true;
 
     // print for now
     // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu\n", 
     //         inst->staticInst->getName(), inst->seqNum);
 
-    // print if this falls into isread or iswrite
-    if (checkerInst.isReadInst()) {
-        DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu, is read\n", inst->staticInst->getName(), checkerInst.uniqueInstSeqNum);
-    } else if (checkerInst.isWriteInst()) {
-        DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu, is write\n", inst->staticInst->getName(), checkerInst.uniqueInstSeqNum);
-    } else {
-        DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu, is unknown\n", inst->staticInst->getName(), checkerInst.uniqueInstSeqNum);
-    }
+    // print in handleStoreComplete
+    DPRINTF(CC_Buffer_Flag, "CC_Buffer: Store complete: %s, seqNum: %llu\n", inst->staticInst->getName(), inst->seqNum);
+
+    // add to decode buffer
+    decode_buffer.push_back(checkerInst);
+    decode_buffer_credits.decrementCredit();
+
     
-   // add to decode buffer
-//    decode_buffer.push_back(checkerInst);
-//    decode_buffer_credits.decrementCredit();
 }
 
 } // namespace gem5
