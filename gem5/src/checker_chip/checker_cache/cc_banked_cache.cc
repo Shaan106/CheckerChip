@@ -80,6 +80,8 @@ void CC_BankedCache::regStats()
 void
 CC_BankedCache::freeBank(unsigned bankID)
 {
+    // TODO: redundant?
+
     // Mark the bank as free
     bankFreeList[bankID] = true;
 
@@ -96,16 +98,12 @@ CC_BankedCache::calculateBankId(Addr addr)
     bankFreeList[bankID] = false;
 
     // Schedule the bank to be free after 20 cycles
-    // Schedule the bank to be free after 20 cycles
-    schedule(new EventFunctionWrapper(
-        [this, bankID]() { freeBank(bankID); }, name() + ".freeBank", true), 
-        curTick() + 20 * clockPeriod());
+    // TODO: redundant?
 
-    // DPRINTF(CC_BankedCache, "bankFreeList: \n");
-    // for (size_t i = 0; i < bankFreeList.size(); ++i) {
-    //     DPRINTF(CC_BankedCache, "[%d] = %s \n", i, bankFreeList[i] ? "true" : "false");
-    // }
-    // DPRINTF(CC_BankedCache, "\n");
+    // schedule(new EventFunctionWrapper(
+    //     [this, bankID]() { freeBank(bankID); }, name() + ".freeBank", true), 
+    //     curTick() + 20 * clockPeriod());
+
 
     return bankID;
 }
@@ -170,8 +168,17 @@ CC_BankedCache::CC_CPUSidePort::recvTimingReq(PacketPtr pkt)
     // Log receipt of the packet
     Cycles current_cycle = owner->curCycle();
 
-    DPRINTF(CC_BankedCache, "Received timing request at cycle %lu: %s\n",
+    DPRINTF(CC_BankedCache, "CC_CPUSidePort: Received timing request at cycle %lu: %s\n",
             current_cycle, pkt->print());
+
+    // get the uniqueInstSeqNum from the packet
+    CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    if (cc_packet_state) {
+        DPRINTF(CC_BankedCache, "CC_CPUSidePort: Received timing request at cycle %lu: %s, uniqueInstSeqNum: %llu\n",
+                current_cycle, pkt->print(), cc_packet_state->uniqueInstSeqNum);
+    } else {
+        DPRINTF(CC_BankedCache, "CC_CPUSidePort: Packet does not have CC_PacketState.\n");
+    }
 
     // Determine the bank ID based on the address
 
@@ -267,7 +274,8 @@ CC_BankedCache::cc_dispatchFromCoreQueue(PacketPtr pkt) {
     // TODO: implement
 
     //debug statement for now
-    DPRINTF(CC_BankedCache, "cc_dispatchFromCoreQueue called for packet ID: %lu\n", pkt->id);
+    DPRINTF(CC_BankedCache, "cc_dispatchFromCoreQueue called for packet seqNum: %llu\n", 
+            dynamic_cast<CC_PacketState*>(pkt->senderState)->uniqueInstSeqNum);
 
     recvTimingReq(pkt);
 }
@@ -298,6 +306,8 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
     if (cc_packet_state) {
         DPRINTF(CC_BankedCache, "Received from queue dispatch\n");
         DPRINTF(CC_BankedCache, "Received request from CC core, global requestor ID: %d, core ID: %d\n", requestor_id, cc_packet_state->senderCoreID);
+        //seqNum
+        DPRINTF(CC_BankedCache, "seqNum: %llu\n", cc_packet_state->uniqueInstSeqNum);
     } else {
         DPRINTF(CC_BankedCache, "Received request from normal core, global requestor ID: %d\n", requestor_id);
     }

@@ -137,16 +137,25 @@ void CC_Buffer::processBufferClockEvent()
     schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
     // schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 
-    //DEBUG for buffer clocks
-    // if (cc_buffer_clock % 100 == 0) {
-    //     // DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
+    // DEBUG for buffer clocks
+    if (cc_buffer_clock % 1000 == 0) {
+        DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
 
-    //     // sendDummyPacket();
+        // sendDummyPacket();
 
-    //     for (const auto& pair : debugStringMap) {
-    //         // DPRINTF(CC_Buffer_Flag, "Key: %s, Value: %d\n", pair.first.c_str(), pair.second);
-    //     }
-    // }
+        // print decode buffer contents
+        DPRINTF(CC_Buffer_Flag, "Decode buffer size: %d\n", decode_buffer.size());
+        // for (auto it = decode_buffer.begin(); it != decode_buffer.end(); ++it) {
+        //     DPRINTF(CC_Buffer_Flag, "Decode buffer contents: %s\n", it->getStaticInst()->getName());
+        // }
+
+        // print execute buffer size
+        DPRINTF(CC_Buffer_Flag, "Execute buffer size: %d\n", execute_buffer.size());
+        // DPRINTF(CC_Buffer_Flag, "Execute buffer contents: %s\n", execute_buffer.size());
+        // for (auto it = execute_buffer.begin(); it != execute_buffer.end(); ++it) {
+        //     DPRINTF(CC_Buffer_Flag, "Execute buffer contents: %s\n", it->getStaticInst()->getName());
+        // }
+    }
 
 }
 
@@ -263,7 +272,7 @@ CC_Buffer::updateExecuteBufferContents()
                 }
 
             } else {
-                // DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s\n", it->getStaticInst()->getName());
+                DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s, uniqueInstSeqNum: %llu\n", it->getStaticInst()->getName(), it->uniqueInstSeqNum);
                 // this is because of in order execution
                 execute_old_inst_not_finished++;
                 return;  // If not verified, exit early and recheck in the next cycle
@@ -294,15 +303,19 @@ CC_Buffer::updateExecuteBufferContents()
 
                     // sendDummyPacket();
                 } else if (it->isWriteInst()) {
+                    // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Write inst.\n");
                     
                     // if it is a write complete inst
                     if (it->isWriteCompleteInst()) {
+                        // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Write complete inst.\n");
                         // it->execVerify_bit = true;
                         // it->instExecuteCycle = cc_buffer_clock;
                         // sendWriteCompletePacket(*it);
 
                         if (sendWriteCompletePacket(*it)) {
+                            // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Send write complete packet.\n");
                             it->execVerify_bit = true;
+                            it->memVerify_bit = true; // TODO: check if this is correct, should be 
                             it->instExecuteCycle = cc_buffer_clock;
                         } else {
                             // DPRINTF(CC_Buffer_Flag, "Failed to send write complete packet.\n");
@@ -310,9 +323,11 @@ CC_Buffer::updateExecuteBufferContents()
                         }
 
                     } else if (sendWriteReqPacket(*it)) { // if able to send inst to mem (buffer not full)
+                        // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Send write req packet.\n");
                         it->execVerify_bit = true;
                         it->instExecuteCycle = cc_buffer_clock;
                     } else {
+                        // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Failed to send write req packet.\n");
                         it->instInFU = false;
                     }
                     functional_unit_pool->cc_immediateFreeUnit(it->functional_unit_index);
@@ -658,6 +673,8 @@ CC_Buffer::sendWriteReqPacket(CheckerInst memInst)
         if (!sendSuccess) {
             bank_queue_full_block++;
             DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendWriteReqPacket).\n");
+        } else {
+            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet sent, uniqueInstSeqNum: %llu\n", memInst.uniqueInstSeqNum);
         }
 
         // Update the address, data pointer, and remaining size
@@ -714,6 +731,8 @@ CC_Buffer::sendWriteCompletePacket(CheckerInst memInst)
         if (!sendSuccess) {
             bank_queue_full_block++;
             DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet BLOCKED (sendWriteCompletePacket).\n");
+        } else {
+            DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet sent (sendWriteCompletePacket).\n");
         }
 
         // Update the address, data pointer, and remaining size
@@ -791,6 +810,13 @@ CC_Buffer::CC_MemSidePort::getCacheBlockSize()
 bool
 CC_Buffer::CC_MemSidePort::sendPacket(PacketPtr pkt)
 {
+    // get the uniqueInstSeqNum from the packet
+    CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
+    if (cc_packet_state) {
+        DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Sending packet: %s, uniqueInstSeqNum: %llu\n", pkt->print(), cc_packet_state->uniqueInstSeqNum);
+    } else {
+        DPRINTF(CC_Buffer_Flag, "CC_MemSidePort: Packet does not have CC_PacketState.\n");
+    }
 
     bool success = sendTimingReq(pkt);
     

@@ -22,15 +22,13 @@ void CC_BankUnit::clock_update()
     // this is called every checker clock cycle from cc_banked_cache
     
 
+    // DPRINTF(CC_BankedCache, "Updating core queues\n");
     updateCoreQueues(); //this adds packets from main queue to core queues
 
-    
-    if (parentCache) {
-        retireFromCoreQueue(); // this checks if any packets are ready to be retired, and retires them
-    } else {
-        DPRINTF(CC_BankedCache, "ERROR: No parent cache found\n");
-    }
+    // DPRINTF(CC_BankedCache, "Retiring from core queues\n");
+    retireFromCoreQueue(); // this checks if any packets are ready to be retired, and retires them
 
+    // DPRINTF(CC_BankedCache, "Done clock update\n");
     // remove should be done here too in future.
 }
 
@@ -38,6 +36,7 @@ bool CC_BankUnit::addPacket(PacketPtr pkt, int senderCoreID)
 {
 
     if (mainQueue.size() >= maxMainQueueSize) {
+        DPRINTF(CC_BankedCache, "Main queue is full; cannot add the packet\n");
         // Queue is full; cannot add the packet
         return false;
     } else {
@@ -77,6 +76,12 @@ bool CC_BankUnit::addPacket(PacketPtr pkt, int senderCoreID)
         }
 
         mainQueue.push_back(std::make_tuple(pkt, senderCoreID, uniqueInstSeqNum, isReady));
+
+        // print main queue
+        DPRINTF(CC_BankedCache, "Main queue: \n");
+        for (auto &packet : mainQueue) {
+            DPRINTF(CC_BankedCache, "Packet: %s\n", std::get<0>(packet)->print());
+        }
         
         return true;
     }
@@ -100,7 +105,25 @@ void CC_BankUnit::updateCoreQueues()
 
         CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
 
-        if (coreQueues[senderCoreID].size() < maxCoreQueueSize) {
+        if (cc_packet_state->storeType == StoreType::complete) {
+            DPRINTF(CC_BankedCache, "ST::complete in core queue %d\n", senderCoreID);
+            
+            // get unique instruction ID from packet
+            uint64_t uniqueInstSeqNum = cc_packet_state->uniqueInstSeqNum;
+            
+            // int temp_counter = 0;
+            // check if uniqueInstSeqNum is in the relevant core queue
+            for (auto &packet : coreQueues[senderCoreID]) { // loop over all packets in the core queue
+                // if (std::get<2>(packet) == uniqueInstSeqNum) { // if coreQueue[senderCoreID][i].uniqueInstSeqNum == uniqueInstSeqNum
+                //     std::get<3>(packet) = true; // set isReady to true
+                // }
+                std::get<3>(packet) = true; //TODO: only for now
+                
+            }
+
+            mainQueue.pop_front();
+        // if store type is non-store, then continue for now (no need to add to core queue)
+        } else if (coreQueues[senderCoreID].size() < maxCoreQueueSize) {
 
             // if store type is commit, add to core queue
             if (cc_packet_state->storeType == StoreType::commit) {
@@ -110,21 +133,6 @@ void CC_BankUnit::updateCoreQueues()
                 mainQueue.pop_front();
             
             // if store type is complete, release packet in relevant core queue (set isReady to true)
-            } else if (cc_packet_state->storeType == StoreType::complete) {
-                DPRINTF(CC_BankedCache, "ST::complete in core queue %d\n", senderCoreID);
-                
-                // get unique instruction ID from packet
-                uint64_t uniqueInstSeqNum = cc_packet_state->uniqueInstSeqNum;
-
-                // check if uniqueInstSeqNum is in the relevant core queue
-                for (auto &packet : coreQueues[senderCoreID]) { // loop over all packets in the core queue
-                    if (std::get<2>(packet) == uniqueInstSeqNum) { // if coreQueue[senderCoreID][i].uniqueInstSeqNum == uniqueInstSeqNum
-                        std::get<3>(packet) = true; // set isReady to true
-                    }
-                }
-
-                mainQueue.pop_front();
-            // if store type is non-store, then continue for now (no need to add to core queue)
             } else if (cc_packet_state->storeType == StoreType::non_store) {
                 // TODO: loads don't need to be added to core queues
                 totalCoreQueueSize++;
@@ -133,6 +141,21 @@ void CC_BankUnit::updateCoreQueues()
                 mainQueue.pop_front();        
             }
 
+        }
+
+        // print all main and core queues
+        DPRINTF(CC_BankedCache, "Main queue: \n");
+        for (auto &packet : mainQueue) {
+            // print seqNum
+            DPRINTF(CC_BankedCache, "SeqNum: %llu\n", std::get<2>(packet));
+        }
+
+        DPRINTF(CC_BankedCache, "Core queues: \n");
+        for (int i = 0; i < numCores; i++) {
+            DPRINTF(CC_BankedCache, "Core queue %d: \n", i);
+            for (auto &packet : coreQueues[i]) {
+                DPRINTF(CC_BankedCache, "SeqNum: %llu\n", std::get<2>(packet));
+            }
         }
     }
 }
@@ -148,27 +171,47 @@ void CC_BankUnit::retireFromCoreQueue() {
     int coreToCheck = rand() % numCores;
     // int coreToCheck = 0;
 
+    PacketPtr currentPkt;
+    bool currentInstIsReady = false;
+    int currentCore;
+
     // loop over all numCores core queues, starting from coreToCheck
     for (int i = 0; i < numCores; i++) {
-        int currentCore = (coreToCheck + i) % numCores;
+        currentCore = (coreToCheck + i) % numCores;
         
         if (!coreQueues[currentCore].empty()) {
-            PacketPtr pkt = std::get<0>(coreQueues[currentCore].front());
+            // DPRINTF(CC_BankedCache, "Checking core queue %d\n", currentCore);
+            // DPRINTF(CC_BankedCache, "int i: %d\n", i);
+            currentPkt = std::get<0>(coreQueues[currentCore].front());
 
             // check if packet is ready to be retired
-            // bool isReady = std::get<3>(coreQueues[currentCore].front());
-            bool isReady = true;
+            currentInstIsReady = std::get<3>(coreQueues[currentCore].front());
+            // bool isReady = true;
 
-            if (isReady) {
+            if (currentInstIsReady) {
+                DPRINTF(CC_BankedCache, "Retiring packet from core queue %d, size: %d\n", currentCore, coreQueues[currentCore].size());                
+                // print current packet seqNum
+                DPRINTF(CC_BankedCache, "Current packet seqNum: %llu\n", std::get<2>(coreQueues[currentCore].front()));
+                // print type of current packet (storeType)
+                CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(currentPkt->senderState);
+                if (cc_packet_state->storeType == StoreType::commit) {
+                    DPRINTF(CC_BankedCache, "Current packet is commit\n");
+                } else if (cc_packet_state->storeType == StoreType::complete) {
+                    DPRINTF(CC_BankedCache, "Current packet is complete\n");
+                } else if (cc_packet_state->storeType == StoreType::non_store) {
+                    DPRINTF(CC_BankedCache, "Current packet is non-store\n");
+                }
                 coreQueues[currentCore].pop_front();
                 totalCoreQueueSize--;
-                parentCache->cc_dispatchFromCoreQueue(pkt);
+                parentCache->cc_dispatchFromCoreQueue(currentPkt);
                 return;
             }
         }
     }
 
-    // DPRINTF(CC_BankedCache, "No packet found in any core queue\n");s
+    return;
+
+    // DPRINTF(CC_BankedCache, "No packet found in any core queue\n");
 
 }
 
