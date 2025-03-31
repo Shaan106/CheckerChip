@@ -138,7 +138,7 @@ void CC_Buffer::processBufferClockEvent()
     // schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 
     // DEBUG for buffer clocks
-    if (cc_buffer_clock % 1000 == 0) {
+    if (cc_buffer_clock % 10000 == 0) {
         DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
 
         // sendDummyPacket();
@@ -229,9 +229,10 @@ CC_Buffer::updateDecodeBufferContents()
 void 
 CC_Buffer::updateExecuteBufferContents()
 {
+    bool olderInstStuck = false;
     for (auto it = execute_buffer.begin(); it != execute_buffer.end(); )
     {
-        if (it->instExecuteCycle <= cc_buffer_clock && it->instInFU == true) {
+        if (it->instExecuteCycle <= cc_buffer_clock && it->instInFU == true && !olderInstStuck) {
             // DPRINTF(CC_Buffer_Flag, "---------Finished executing instruction: %s---------\n", it->getStaticInst()->getName());
             // DPRINTF(CC_Buffer_Flag, "Current cc_buffer_clock: %lu\n", cc_buffer_clock);
             // DPRINTF(CC_Buffer_Flag, "Inst instExecuteCycle: %d\n", it->instExecuteCycle);
@@ -272,13 +273,22 @@ CC_Buffer::updateExecuteBufferContents()
                 }
 
             } else {
-                DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s, uniqueInstSeqNum: %llu\n", it->getStaticInst()->getName(), it->uniqueInstSeqNum);
+                // DPRINTF(CC_Buffer_Flag, "Instruction not fully verified: %s, uniqueInstSeqNum: %llu\n", it->getStaticInst()->getName(), it->uniqueInstSeqNum);
                 // this is because of in order execution
+
+                olderInstStuck = true;
+
+                // print entire execute buffer
+                // DPRINTF(CC_Buffer_Flag, "Execute buffer contents:\n");
+                // for (auto it = execute_buffer.begin(); it != execute_buffer.end(); ++it) {
+                //     DPRINTF(CC_Buffer_Flag, "Instruction: %s, uniqueInstSeqNum: %llu\n", it->getStaticInst()->getName(), it->uniqueInstSeqNum);
+                // }
+
                 execute_old_inst_not_finished++;
-                return;  // If not verified, exit early and recheck in the next cycle
+                // return;  // If not verified, exit early and recheck in the next cycle
             }
 
-        } else {
+        } else if (!it->instInFU) {
             int free_FU_idx = functional_unit_pool->getUnit(it->getStaticInst()->opClass());
 
             if (free_FU_idx >= 0) {
@@ -364,6 +374,9 @@ CC_Buffer::updateExecuteBufferContents()
                     // return;
                 }
             }
+        } else {
+            // this is the case where inst is in FU, but is stuck behind something else
+            ++it;
         }
     }
 }
