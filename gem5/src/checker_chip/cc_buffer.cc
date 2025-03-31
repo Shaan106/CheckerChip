@@ -46,7 +46,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        256, //params.maxCredits, //max_credits
+                        1024, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -138,7 +138,7 @@ void CC_Buffer::processBufferClockEvent()
     // schedule(bufferClockEvent, curTick() + cc_buffer_clock_period);
 
     // DEBUG for buffer clocks
-    if (cc_buffer_clock % 10000 == 0) {
+    if (cc_buffer_clock % 100000 == 0) {
         DPRINTF(CC_Buffer_Flag, "clock_cycle: %lu\n", cc_buffer_clock);
 
         // sendDummyPacket();
@@ -279,10 +279,10 @@ CC_Buffer::updateExecuteBufferContents()
                 olderInstStuck = true;
 
                 // print entire execute buffer
-                // DPRINTF(CC_Buffer_Flag, "Execute buffer contents:\n");
-                // for (auto it = execute_buffer.begin(); it != execute_buffer.end(); ++it) {
-                //     DPRINTF(CC_Buffer_Flag, "Instruction: %s, uniqueInstSeqNum: %llu\n", it->getStaticInst()->getName(), it->uniqueInstSeqNum);
-                // }
+                DPRINTF(CC_Buffer_Flag, "Execute buffer contents:\n");
+                for (auto it = execute_buffer.begin(); it != execute_buffer.end(); ++it) {
+                    DPRINTF(CC_Buffer_Flag, "Instruction: %s, uniqueInstSeqNum: %llu\n", it->getStaticInst()->getName(), it->uniqueInstSeqNum);
+                }
 
                 execute_old_inst_not_finished++;
                 // return;  // If not verified, exit early and recheck in the next cycle
