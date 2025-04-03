@@ -109,15 +109,15 @@ void CC_BankUnit::updateCoreQueues()
             DPRINTF(CC_BankedCache, "ST::complete in core queue %d\n", senderCoreID);
             
             // get unique instruction ID from packet
-            uint64_t uniqueInstSeqNum = cc_packet_state->uniqueInstSeqNum;
+            // uint64_t uniqueInstSeqNum = cc_packet_state->uniqueInstSeqNum;
             
             // int temp_counter = 0;
             // check if uniqueInstSeqNum is in the relevant core queue
             for (auto &packet : coreQueues[senderCoreID]) { // loop over all packets in the core queue
-                // if (std::get<2>(packet) == uniqueInstSeqNum) { // if coreQueue[senderCoreID][i].uniqueInstSeqNum == uniqueInstSeqNum
-                //     std::get<3>(packet) = true; // set isReady to true
-                // }
-                std::get<3>(packet) = true; //TODO: only for now
+                if (std::get<2>(packet) == uniqueInstSeqNum) { // if coreQueue[senderCoreID][i].uniqueInstSeqNum == uniqueInstSeqNum
+                    std::get<3>(packet) = true; // set isReady to true
+                }
+                // std::get<3>(packet) = true; //TODO: only for now
                 
             }
 
