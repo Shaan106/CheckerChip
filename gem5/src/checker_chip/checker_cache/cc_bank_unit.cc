@@ -138,7 +138,13 @@ void CC_BankUnit::updateCoreQueues()
                 totalCoreQueueSize++;
                 DPRINTF(CC_BankedCache, "LD::non_store in core queue %d\n", senderCoreID);
                 coreQueues[senderCoreID].push_back(mainQueue.front());
-                mainQueue.pop_front();        
+                mainQueue.pop_front();
+
+                // go over every packet in the core queue and send packet if found correct val.
+
+                // otherwise set a new bit for load to true, and send stall 1 cycle and send packet
+
+                // load should not go to per core queue.
             }
 
         }

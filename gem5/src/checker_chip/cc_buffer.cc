@@ -46,7 +46,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        1024, //params.maxCredits, //max_credits
+                        512, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   
@@ -336,6 +336,9 @@ CC_Buffer::updateExecuteBufferContents()
                         // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Send write req packet.\n");
                         it->execVerify_bit = true;
                         it->instExecuteCycle = cc_buffer_clock;
+
+                        // also setting memVerify_bit to true because st commits can be removed frombuffer (no deadlocks)
+                        it->memVerify_bit = true;
                     } else {
                         // DPRINTF(CC_Buffer_Flag, "CC_Buffer: Failed to send write req packet.\n");
                         it->instInFU = false;
