@@ -61,7 +61,8 @@ bool CC_BankUnit::addPacket(PacketPtr pkt, int senderCoreID)
             } else if (cc_packet_state->storeType == StoreType::non_store) {
                 DPRINTF(CC_BankedCache, "CC_BankUnit: Processing non-store packet, uniqueInstSeqNum: %llu\n", uniqueInstSeqNum);
                 // Handle non-store packet
-                isReady = true;
+                // this is false because we don't ever want a load to go to the per-core queues
+                isReady = false; 
             } else {
                 DPRINTF(CC_BankedCache, "ERROR:CC_BankUnit: Unknown packet type, uniqueInstSeqNum: %llu\n", uniqueInstSeqNum);
                 // print more info about the packet
@@ -75,7 +76,7 @@ bool CC_BankUnit::addPacket(PacketPtr pkt, int senderCoreID)
             return false;
         }
 
-        mainQueue.push_back(std::make_tuple(pkt, senderCoreID, uniqueInstSeqNum, isReady));
+        mainQueue.push_back(std::make_tuple(pkt, senderCoreID, uniqueInstSeqNum, isReady, false)); //dispatchLoad always false for now
 
         // print main queue
         DPRINTF(CC_BankedCache, "Main queue: \n");
@@ -97,11 +98,19 @@ void CC_BankUnit::updateCoreQueues()
 
     // update core queues first - move previous packets to per core queues
     if (!mainQueue.empty()) {
+
+
+        PacketCoreTuple& currentMemInst = mainQueue.front();
         
-        PacketPtr pkt = std::get<0>(mainQueue.front());
-        int senderCoreID = std::get<1>(mainQueue.front());
+        PacketPtr pkt = std::get<0>(currentMemInst);
+        int senderCoreID = std::get<1>(currentMemInst);
         // bool isReady = std::get<2>(mainQueue.front());
-        uint64_t uniqueInstSeqNum = std::get<2>(mainQueue.front());
+        uint64_t uniqueInstSeqNum = std::get<2>(currentMemInst);
+        // bool isReady = std::get<3>(currentMemInst);
+        bool dispatchLoad = std::get<4>(currentMemInst);
+
+        // store address of packet
+        Addr pktAddr = pkt->getAddr();
 
         CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(pkt->senderState);
 
@@ -123,46 +132,73 @@ void CC_BankUnit::updateCoreQueues()
 
             mainQueue.pop_front();
         // if store type is non-store, then continue for now (no need to add to core queue)
-        } else if (coreQueues[senderCoreID].size() < maxCoreQueueSize) {
-
-            // if store type is commit, add to core queue
-            if (cc_packet_state->storeType == StoreType::commit) {
+        } else if (cc_packet_state->storeType == StoreType::commit) {
+            if (coreQueues[senderCoreID].size() < maxCoreQueueSize)
+            {
                 totalCoreQueueSize++;
                 DPRINTF(CC_BankedCache, "ST::commit in core queue %d\n", senderCoreID);
                 coreQueues[senderCoreID].push_back(mainQueue.front());
                 mainQueue.pop_front();
-            
-            // if store type is complete, release packet in relevant core queue (set isReady to true)
-            } else if (cc_packet_state->storeType == StoreType::non_store) {
-                // TODO: loads don't need to be added to core queues
-                totalCoreQueueSize++;
-                DPRINTF(CC_BankedCache, "LD::non_store in core queue %d\n", senderCoreID);
-                coreQueues[senderCoreID].push_back(mainQueue.front());
-                mainQueue.pop_front();
-
-                // go over every packet in the core queue and send packet if found correct val.
-
-                // otherwise set a new bit for load to true, and send stall 1 cycle and send packet
-
-                // load should not go to per core queue.
             }
+            
+        } else if (cc_packet_state->storeType == StoreType::non_store) {
+
+            bool canBypassLoad = false;
+
+            // go over every packet in the core queue and send packet if found correct val.
+
+            for (auto &packet : coreQueues[senderCoreID]) { // loop over all packets in the core queue
+                    if (std::get<0>(packet)->getAddr() == pktAddr) {  
+                        // if address is the same then dispatch from here
+                        // TODO: this is doing a cache access, need to change cc_dispatchFromCoreQueue to do instant returns with less latency
+                        DPRINTF(CC_BankedCache, "LD::non_store found packet in core queue %d\n", senderCoreID);
+                        // mainQueue.pop_front();
+                        // parentCache->cc_dispatchFromCoreQueue(pkt);
+                        // totalCoreQueueSize++;
+                        // std::get<3>(currentMemInst) = true; // set isReady to true
+                        // coreQueues[senderCoreID].push_back(mainQueue.front());
+                        // mainQueue.pop_front();
+                        canBypassLoad = true;
+                    }
+            }
+
+            if (canBypassLoad == false) {
+                // 
+                // TEMP: this is a temp working soln
+                totalCoreQueueSize++;
+                DPRINTF(CC_BankedCache, "LD::non_store in core queue (bypassed) %d\n", senderCoreID);
+                // std::get<3>(mainQueue.front()) = true; // set isReady to true
+                std::get<3>(currentMemInst) = true; // set isReady to true
+                // coreQueues[senderCoreID].push_back(mainQueue.front());
+                parentCache->cc_dispatchFromCoreQueue(pkt, false); //isLoadBypassed is false
+                mainQueue.pop_front();
+            } else {
+                totalCoreQueueSize++;
+                DPRINTF(CC_BankedCache, "LD::non_store in cache (no bypass) %d\n", senderCoreID);
+                // std::get<3>(mainQueue.front()) = true; // set isReady to true
+                std::get<3>(currentMemInst) = true; // set isReady to true
+                // coreQueues[senderCoreID].push_back(mainQueue.front());
+                parentCache->cc_dispatchFromCoreQueue(pkt, true); // isLoadBypassed is true
+                mainQueue.pop_front();
+            }
+
 
         }
 
         // print all main and core queues
-        DPRINTF(CC_BankedCache, "Main queue: \n");
-        for (auto &packet : mainQueue) {
-            // print seqNum
-            DPRINTF(CC_BankedCache, "SeqNum: %llu\n", std::get<2>(packet));
-        }
+        // DPRINTF(CC_BankedCache, "Main queue: \n");
+        // for (auto &packet : mainQueue) {
+        //     // print seqNum
+        //     DPRINTF(CC_BankedCache, "mainQ SeqNum: %llu\n", std::get<2>(packet));
+        // }
 
-        DPRINTF(CC_BankedCache, "Core queues: \n");
-        for (int i = 0; i < numCores; i++) {
-            DPRINTF(CC_BankedCache, "Core queue %d: \n", i);
-            for (auto &packet : coreQueues[i]) {
-                DPRINTF(CC_BankedCache, "SeqNum: %llu\n", std::get<2>(packet));
-            }
-        }
+        // DPRINTF(CC_BankedCache, "Core queues: \n");
+        // for (int i = 0; i < numCores; i++) {
+        //     DPRINTF(CC_BankedCache, "Core queue %d: \n", i);
+        //     for (auto &packet : coreQueues[i]) {
+        //         DPRINTF(CC_BankedCache, "coreQ SeqNum: %llu\n", std::get<2>(packet));
+        //     }
+        // }
     }
 }
 

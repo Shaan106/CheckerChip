@@ -270,14 +270,15 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
 }
 
 void 
-CC_BankedCache::cc_dispatchFromCoreQueue(PacketPtr pkt) {
+CC_BankedCache::cc_dispatchFromCoreQueue(PacketPtr pkt, bool isLoadBypassed) {
     // TODO: implement
 
     //debug statement for now
-    DPRINTF(CC_BankedCache, "cc_dispatchFromCoreQueue called for packet seqNum: %llu\n", 
-            dynamic_cast<CC_PacketState*>(pkt->senderState)->uniqueInstSeqNum);
+    DPRINTF(CC_BankedCache, "cc_dispatchFromCoreQueue called for packet seqNum: %llu, isLoadBypassed: %s\n", 
+            dynamic_cast<CC_PacketState*>(pkt->senderState)->uniqueInstSeqNum,
+            isLoadBypassed ? "true" : "false");
 
-    recvTimingReq(pkt);
+    recvTimingReq(pkt); 
 }
 
 

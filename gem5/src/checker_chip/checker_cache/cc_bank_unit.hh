@@ -34,7 +34,7 @@ class CC_BankUnit
     int totalCoreQueueSize = 0;
 
     // Define type for packet and core ID tuple
-    using PacketCoreTuple = std::tuple<PacketPtr, int, uint64_t, bool>; // <packet, coreID, uniqueInstID, isReady>
+    using PacketCoreTuple = std::tuple<PacketPtr, int, uint64_t, bool, bool>; // <packet, coreID, uniqueInstID, isReady, dispatchLoad?>
 
     std::deque<PacketCoreTuple> mainQueue;
     std::array<std::deque<PacketCoreTuple>, numCores> coreQueues;
