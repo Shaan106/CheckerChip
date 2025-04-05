@@ -89,6 +89,15 @@ class CC_BankedCache : public Cache
                           Tick forward_time,
                           Tick request_time) override;
 
+    // Banked-specific handling for timing reqs (HIT)
+    void bankedHandleTimingReqHit(PacketPtr pkt, CacheBlk *blk,
+                              Tick request_time);
+    
+    // Banked-specific handling for timing reqs (MISS)
+    void bankedHandleTimingReqMiss(PacketPtr pkt, CacheBlk *blk,
+                                Tick forward_time,
+                                Tick request_time);
+
   public:
     /**
      * Port on the CPU-side that receives requests.

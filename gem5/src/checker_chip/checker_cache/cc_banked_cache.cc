@@ -421,19 +421,31 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
     //     DPRINTF(CC_BankedCache, "|CC_BankedCache::recvTimingReq| No Custom State found for Packet ID: %lu\n", pkt->id);
     // }    
 
-    Cycles lat;
-    CacheBlk *blk = nullptr;
-    bool satisfied = false;
+    Cycles lat;           // Will store the access latency
+    CacheBlk *blk = nullptr;  // Will store pointer to the accessed cache block
+    bool satisfied = false;   // Will indicate if the access was satisfied (hit)
     {
         PacketList writebacks;
         // Note that lat is passed by reference here. The function
         // access() will set the lat value.
+        // The access() function will:
+        // - Set the lat value (access latency)
+        // - Set the blk pointer if there's a hit
+        // - Set satisfied to true if it's a hit
+        // - Add any blocks that need to be written back to the writebacks list
         satisfied = access(pkt, blk, lat, writebacks);
 
         // After the evicted blocks are selected, they must be forwarded
         // to the write buffer to ensure they logically precede anything
         // happening below
+        // After determining which blocks need to be written back,
+        // schedule them to be sent to the write buffer
+        // The timing is: current time + (access latency + forward latency)
         doWritebacks(writebacks, clockEdge(lat + forwardLatency));
+
+        if (cc_packet_state) {
+            DPRINTF(CC_BankedCache, "|CC_BankedCache::satisfyRequest| \n");
+        }
     }
 
     // CC_PacketState *state = static_cast<CC_PacketState *>(pkt->senderState);
@@ -471,18 +483,21 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
 
         if (satisfied) {
             // cache hit
-            pkt->makeTimingResponse();
-            schedule(new EventFunctionWrapper(
-            [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            clockEdge(Cycles(2*checkerClockRatio)));
-            
+
+            // pkt->makeTimingResponse();
+            // schedule(new EventFunctionWrapper(
+            // [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
+            // clockEdge(Cycles(2*checkerClockRatio)));
+
+            bankedHandleTimingReqHit(pkt, blk, request_time);
         } else {
             // cache miss
-            pkt->makeTimingResponse();
-            schedule(new EventFunctionWrapper(
-            [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            clockEdge(Cycles(4*checkerClockRatio)));
-            // cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt);
+            // pkt->makeTimingResponse();
+            // schedule(new EventFunctionWrapper(
+            // [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
+            // clockEdge(Cycles(4*checkerClockRatio)));
+
+            bankedHandleTimingReqMiss(pkt, blk, forward_time, request_time);
         }
 
     } else {
@@ -1080,6 +1095,36 @@ CC_BankedCache::handleTimingReqMiss(PacketPtr pkt, CacheBlk *blk, Tick forward_t
             allocateMissBuffer(pkt, forward_time);
         }
     }
+}
+
+
+// these are constant latency for now.
+void
+CC_BankedCache::bankedHandleTimingReqHit(PacketPtr pkt, CacheBlk *blk, Tick request_time)
+{
+    DPRINTF(CC_BankedCache, "In CC_BankedCache::bankedHandleTimingReqHit, request_time: %llu\n", request_time);
+
+    CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState*>(pkt->senderState);
+
+    pkt->makeTimingResponse();
+    schedule(new EventFunctionWrapper(
+    [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
+    clockEdge(Cycles(2*checkerClockRatio)));
+    
+}
+
+void
+CC_BankedCache::bankedHandleTimingReqMiss(PacketPtr pkt, CacheBlk *blk, Tick forward_time,
+                                      Tick request_time)
+{
+    DPRINTF(CC_BankedCache, "In CC_BankedCache::bankedHandleTimingReqMiss, request_time: %llu, forward_time: %llu\n", request_time, forward_time);
+
+    CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState*>(pkt->senderState);
+
+    pkt->makeTimingResponse();
+    schedule(new EventFunctionWrapper(
+    [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
+    clockEdge(Cycles(4*checkerClockRatio)));
 }
 
 } // namespace gem5
