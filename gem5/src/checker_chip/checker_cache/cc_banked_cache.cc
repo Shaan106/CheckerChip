@@ -278,7 +278,19 @@ CC_BankedCache::cc_dispatchFromCoreQueue(PacketPtr pkt, bool isLoadBypassed) {
             dynamic_cast<CC_PacketState*>(pkt->senderState)->uniqueInstSeqNum,
             isLoadBypassed ? "true" : "false");
 
-    recvTimingReq(pkt); 
+    // check if packet is a byassed load.
+    if (isLoadBypassed) {
+
+        CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState*>(pkt->senderState);
+
+        pkt->makeTimingResponse();
+        schedule(new EventFunctionWrapper(
+        [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true),  
+        clockEdge(Cycles(1*checkerClockRatio)));
+        // cycles for bypassed load is 1 checker clock cycle
+    } else {
+        recvTimingReq(pkt); 
+    }
 }
 
 
@@ -462,14 +474,14 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
             pkt->makeTimingResponse();
             schedule(new EventFunctionWrapper(
             [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            clockEdge(Cycles(4)));
+            clockEdge(Cycles(2*checkerClockRatio)));
             
         } else {
             // cache miss
             pkt->makeTimingResponse();
             schedule(new EventFunctionWrapper(
             [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            clockEdge(Cycles(12)));
+            clockEdge(Cycles(4*checkerClockRatio)));
             // cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt);
         }
 
