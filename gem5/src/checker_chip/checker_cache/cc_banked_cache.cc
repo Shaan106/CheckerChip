@@ -75,6 +75,37 @@ void CC_BankedCache::regStats()
             .desc("Distribution of bank queue for bank " + std::to_string(i))
             .flags(statistics::pdf | statistics::display);
     }
+    
+    // Initialize statistics for cc_dispatchFromCoreQueue
+    loadBypassCount
+        .name(name() + ".loadBypassCount")
+        .desc("Number of load packets that were bypassed")
+        .flags(statistics::total);
+        
+    normalLoadDispatchCount
+        .name(name() + ".normalLoadDispatchCount")
+        .desc("Number of load packets that were normally dispatched")
+        .flags(statistics::total);
+        
+    storeDispatchCount
+        .name(name() + ".storeDispatchCount")
+        .desc("Number of store packets that were dispatched")
+        .flags(statistics::total);
+        
+    unknownPacketTypeCount
+        .name(name() + ".unknownPacketTypeCount")
+        .desc("Number of packets with unknown type that were dispatched")
+        .flags(statistics::total);
+        
+    checkerCacheHits
+        .name(name() + ".checkerCacheHits")
+        .desc("Number of cache hits during access from the checker side")
+        .flags(statistics::total);
+        
+    checkerCacheMisses
+        .name(name() + ".checkerCacheMisses")
+        .desc("Number of cache misses during access from the checker side")
+        .flags(statistics::total);
 }
 
 void
@@ -271,9 +302,25 @@ CC_BankedCache::cc_cacheController(PacketPtr pkt)
 
 void 
 CC_BankedCache::cc_dispatchFromCoreQueue(PacketPtr pkt, bool isLoadBypassed) {
-    // TODO: implement
+    // determine if the packet is a load or a store
+    bool isLoad = pkt->isRead();
+    bool isStore = pkt->isWrite();
 
-    //debug statement for now
+    if (isLoad && isLoadBypassed) {
+        // Increment stats for load bypass
+        loadBypassCount++;
+    } else if (isLoad && !isLoadBypassed) {
+        // Increment stats for normal load dispatch
+        normalLoadDispatchCount++;
+    } else if (isStore) {
+        // Increment stats for store dispatch
+        storeDispatchCount++;
+    } else {
+        // Increment stats for unknown packet type
+        unknownPacketTypeCount++;
+    }
+
+    
     DPRINTF(CC_BankedCache, "cc_dispatchFromCoreQueue called for packet seqNum: %llu, isLoadBypassed: %s\n", 
             dynamic_cast<CC_PacketState*>(pkt->senderState)->uniqueInstSeqNum,
             isLoadBypassed ? "true" : "false");
@@ -483,19 +530,12 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
 
         if (satisfied) {
             // cache hit
-
-            // pkt->makeTimingResponse();
-            // schedule(new EventFunctionWrapper(
-            // [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            // clockEdge(Cycles(2*checkerClockRatio)));
+            checkerCacheHits++;
 
             bankedHandleTimingReqHit(pkt, blk, request_time);
         } else {
             // cache miss
-            // pkt->makeTimingResponse();
-            // schedule(new EventFunctionWrapper(
-            // [this, cc_packet_state, pkt]() { cc_cpu_port[cc_packet_state->senderCoreID].sendPacket(pkt); }, name() + ".cc_cpu_port_sendHitPacket", true), 
-            // clockEdge(Cycles(4*checkerClockRatio)));
+            checkerCacheMisses++;
 
             bankedHandleTimingReqMiss(pkt, blk, forward_time, request_time);
         }
@@ -901,8 +941,8 @@ CC_BankedCache::handleTimingReqHit(PacketPtr pkt, CacheBlk *blk, Tick request_ti
         // cc_cpu_port[0].schedTimingResp(pkt, request_time);
         
     } else {
-        DPRINTF(CC_BankedCache, "%s satisfied %s, no response needed\n", __func__,
-                pkt->print());
+        // DPRINTF(CC_BankedCache, "%s satisfied %s, no response needed\n", __func__,
+        //         pkt->print());
 
         // queue the packet for deletion, as the sending cache is
         // still relying on it; if the block is found in access(),
@@ -1098,7 +1138,9 @@ CC_BankedCache::handleTimingReqMiss(PacketPtr pkt, CacheBlk *blk, Tick forward_t
 }
 
 
-// these are constant latency for now.
+// these are constant latency for now based on a miss or a hit
+// TODO: Locked RMW case
+// TODO: write in missed block into cache (deal with the misses).
 void
 CC_BankedCache::bankedHandleTimingReqHit(PacketPtr pkt, CacheBlk *blk, Tick request_time)
 {

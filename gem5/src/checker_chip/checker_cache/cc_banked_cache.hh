@@ -40,6 +40,14 @@ class CC_BankedCache : public Cache
     // Override the regStats method
     void regStats() override;
 
+    // Statistics for cc_dispatchFromCoreQueue
+    statistics::Scalar loadBypassCount;
+    statistics::Scalar normalLoadDispatchCount;
+    statistics::Scalar storeDispatchCount;
+    statistics::Scalar unknownPacketTypeCount;
+    statistics::Scalar checkerCacheHits;
+    statistics::Scalar checkerCacheMisses;
+
   protected:
     // Number of banks
     unsigned numBanks;
