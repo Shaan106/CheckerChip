@@ -279,6 +279,10 @@ bool CC_BankUnit::isEmpty() const
     }
 }
 
+int CC_BankUnit::getOccupancy() const {
+    return totalCoreQueueSize + mainQueue.size();
+}
+
 size_t CC_BankUnit::getMainQueueSize() const
 {
     return mainQueue.size();

@@ -47,6 +47,8 @@ class CC_BankedCache : public Cache
     statistics::Scalar unknownPacketTypeCount;
     statistics::Scalar checkerCacheHits;
     statistics::Scalar checkerCacheMisses;
+    statistics::Scalar oooCacheHits;
+    statistics::Scalar oooCacheMisses;
 
   protected:
     // Number of banks

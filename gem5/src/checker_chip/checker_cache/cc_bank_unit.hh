@@ -53,6 +53,9 @@ class CC_BankUnit
         bankId = id;
     }
 
+    // provides total occupancy of the bank queues (main queue + all core queues)
+    int getOccupancy() const;
+
     // called by cc_banked_cache every checker clock cycle
     void clock_update();
     

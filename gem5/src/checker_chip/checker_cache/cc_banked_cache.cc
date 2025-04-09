@@ -54,6 +54,7 @@ void CC_BankedCache::clock_update()
     // go over every bank and (TODO: make this function) call the bank's clock_update()
     for (unsigned i = 0; i < numBanks; ++i) {
         bankUnits[i].clock_update();
+        bank_queue_occupancy_histogram_arr[i]->sample(bankUnits[i].getOccupancy());
     }
 
     // schedule next clock_update in 1 checker clock cycle
@@ -105,6 +106,16 @@ void CC_BankedCache::regStats()
     checkerCacheMisses
         .name(name() + ".checkerCacheMisses")
         .desc("Number of cache misses during access from the checker side")
+        .flags(statistics::total);
+        
+    oooCacheHits
+        .name(name() + ".oooCacheHits")
+        .desc("Total number of cache hits (including both checker and non-checker)")
+        .flags(statistics::total);
+        
+    oooCacheMisses
+        .name(name() + ".oooCacheMisses")
+        .desc("Total number of cache misses (including both checker and non-checker)")
         .flags(statistics::total);
 }
 
@@ -541,22 +552,24 @@ CC_BankedCache::recvTimingReq(PacketPtr pkt)
         }
 
     } else {
-    if (satisfied) {
-        // notify before anything else as later handleTimingReqHit might turn
-        // the packet in a response
-        ppHit->notify(CacheAccessProbeArg(pkt,accessor));
+        if (satisfied) {
+            // notify before anything else as later handleTimingReqHit might turn
+            // the packet in a response
+            ppHit->notify(CacheAccessProbeArg(pkt,accessor));
 
-        if (prefetcher && blk && blk->wasPrefetched()) {
-            // DPRINTF(Cache, "Hit on prefetch for addr %#x (%s)\n", pkt->getAddr(), pkt->isSecure() ? "s" : "ns");
-            blk->clearPrefetched();
+            if (prefetcher && blk && blk->wasPrefetched()) {
+                // DPRINTF(Cache, "Hit on prefetch for addr %#x (%s)\n", pkt->getAddr(), pkt->isSecure() ? "s" : "ns");
+                blk->clearPrefetched();
+            }
+
+            oooCacheHits++;
+            handleTimingReqHit(pkt, blk, request_time);
+        } else {
+            oooCacheMisses++;
+            handleTimingReqMiss(pkt, blk, forward_time, request_time);
+
+            ppMiss->notify(CacheAccessProbeArg(pkt,accessor));
         }
-
-        handleTimingReqHit(pkt, blk, request_time);
-    } else {
-        handleTimingReqMiss(pkt, blk, forward_time, request_time);
-
-        ppMiss->notify(CacheAccessProbeArg(pkt,accessor));
-    }
 
     if (prefetcher) {
         // track time of availability of next prefetch, if any
