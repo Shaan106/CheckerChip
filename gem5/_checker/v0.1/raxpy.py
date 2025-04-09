@@ -38,7 +38,6 @@ board = SimpleBoard(clk_freq="3GHz",
                     memory=memory,
                     cache_hierarchy=cache_hierarchy)
 
-# loading the binary for running hello-world
 
 # binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/RAXPY/raxpy_benchmark")
 binary = CustomResource("/home/ay140/CheckerChip/gem5/_checker/v0.1/RAXPY/raxpy_enhanced_benchmark")
@@ -49,17 +48,5 @@ board.set_se_binary_workload(binary)
 
 # want to run a simulation with the board we have specified (the one just created)
 simulator = Simulator(board=board)
-
-# simpoint_start_insts = [1_000_000]  # A list of instruction counts to start the SimPoint
-# endpoint_inst_count = simpoint_start_insts[0] + 2_000_000
-
-# #  _instantiate first
-# # simulator.schedule_simpoint(simpoint_start_insts)
-
-# simulator._board.get_processor().get_cores()[0]._set_simpoint(
-#             simpoint_start_insts, False
-#         )
-
-# simulator.schedule_max_insts(inst=endpoint_inst_count)
 
 simulator.run()
