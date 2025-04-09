@@ -40,6 +40,28 @@
 #
 # "m5 test.py"
 
+'''
+/home/shaan/Desktop/AdvCompArch/gem5/build/X86/gem5.opt 
+/home/shaan/Desktop/AdvCompArch/gem5/configs/se.py 
+--cmd=../../build/build_base_mytest-m64.0000/mcf_s
+ --options=inp.in --mem-size=8GB --maxinsts=1000000000 --l1d_size=64kB --l1d_assoc=2 --cacheline_size=64 --cpu-clock=1GHz --cpu-type=X86O3CPU --caches
+
+/home/ay140/spring25/CheckerChip/gem5/build/X86/gem5.opt 
+/home/ay140/spring25/CheckerChip/gem5/_checker/spec_scripts/se.py 
+--cmd=/home/ay140/spec-2017/cpu2017/benchspec/CPU/605.mcf_s/build/build_base_CLIPPER_TEST-m64.0000/mcf_s \
+--options="inp.in" \
+--mem-size=8GB \
+--maxinsts=10000000 \
+--l1d_size=64kB \
+--l1d_assoc=2 \
+--cacheline_size=64 \
+--cpu-clock=1GHz \
+--cpu-type=X86O3CPU \
+--caches
+
+/home/ay140/spring25/CheckerChip/gem5/build/X86/gem5.opt /home/ay140/spring25/CheckerChip/gem5/_checker/spec_scripts/se.py --cmd=/home/ay140/spec-2017/cpu2017/benchspec/CPU/605.mcf_s/build/build_base_CLIPPER_TEST-m64.0000/mcf_s --options="inp.in" --mem-size=8GB --maxinsts=10000000 --l1d_size=64kB --l1d_assoc=2 --cacheline_size=64 --cpu-clock=1GHz --cpu-type=X86O3CPU --caches
+'''
+
 import argparse
 import sys
 import os
@@ -50,21 +72,21 @@ from m5.objects import *
 from m5.params import NULL
 from m5.util import addToPath, fatal, warn
 from gem5.isas import ISA
-from gem5.runtime import get_runtime_isa
+# from gem5.runtime import get_runtime_isa
 
 addToPath("../../")
 
-from ruby import Ruby
+# from ruby import Ruby
 
-from common import Options
-from common import Simulation
-from common import CacheConfig
-from common import CpuConfig
-from common import ObjectList
-from common import MemConfig
-from common.FileSystemConfig import config_filesystem
-from common.Caches import *
-from common.cpu2000 import *
+import Options
+import Simulation
+import CacheConfig
+import CpuConfig
+import ObjectList
+import MemConfig
+import config_filesystem
+from Caches import *
+from cpu2000 import *
 
 
 def get_processes(args):
@@ -128,9 +150,6 @@ parser = argparse.ArgumentParser()
 Options.addCommonOptions(parser)
 Options.addSEOptions(parser)
 
-if "--ruby" in sys.argv:
-    Ruby.define_options(parser)
-
 args = parser.parse_args()
 
 multiprocesses = []
@@ -144,22 +163,23 @@ if args.bench:
 
     for app in apps:
         try:
-            if get_runtime_isa() == ISA.ARM:
-                exec(
-                    "workload = %s('arm_%s', 'linux', '%s')"
-                    % (app, args.arm_iset, args.spec_input)
-                )
-            else:
-                # TARGET_ISA has been removed, but this is missing a ], so it
-                # has incorrect syntax and wasn't being used anyway.
-                exec(
-                    "workload = %s(buildEnv['TARGET_ISA', 'linux', '%s')"
-                    % (app, args.spec_input)
-                )
+            # if get_runtime_isa() == ISA.ARM:
+            #     exec(
+            #         "workload = %s('arm_%s', 'linux', '%s')"
+            #         % (app, args.arm_iset, args.spec_input)
+            #     )
+            # else:
+            #     TARGET_ISA has been removed, but this is missing a ], so it
+            #     has incorrect syntax and wasn't being used anyway.
+            exec(
+                "workload = %s(buildEnv['TARGET_ISA', 'linux', '%s')"
+                % (app, args.spec_input)
+            )
             multiprocesses.append(workload.makeProcess())
         except:
             print(
-                f"Unable to find workload for {get_runtime_isa().name()}: {app}",
+                # f"Unable to find workload for {get_runtime_isa().name()}: {app}",
+                f"Unable to find workload for {app}",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -258,30 +278,12 @@ for i in range(np):
 
     system.cpu[i].createThreads()
 
-if args.ruby:
-    Ruby.create_system(args, False, system)
-    assert args.num_cpus == len(system.ruby._cpu_ports)
-
-    system.ruby.clk_domain = SrcClockDomain(
-        clock=args.ruby_clock, voltage_domain=system.voltage_domain
-    )
-    for i in range(np):
-        ruby_port = system.ruby._cpu_ports[i]
-
-        # Create the interrupt controller and connect its ports to Ruby
-        # Note that the interrupt controller is always present but only
-        # in x86 does it have message ports that need to be connected
-        system.cpu[i].createInterruptController()
-
-        # Connect the cpu's cache ports to Ruby
-        ruby_port.connectCpuPorts(system.cpu[i])
-else:
-    MemClass = Simulation.setMemClass(args)
-    system.membus = SystemXBar()
-    system.system_port = system.membus.cpu_side_ports
-    CacheConfig.config_cache(args, system)
-    MemConfig.config_mem(args, system)
-    config_filesystem(system, args)
+MemClass = Simulation.setMemClass(args)
+system.membus = SystemXBar()
+system.system_port = system.membus.cpu_side_ports
+CacheConfig.config_cache(args, system)
+MemConfig.config_mem(args, system)
+config_filesystem(system, args)
 
 system.workload = SEWorkload.init_compatible(mp0_path)
 

@@ -21,19 +21,87 @@
 import argparse
 import os
 import sys
+from pathlib import Path
+
+import m5
+from m5.defines import buildEnv
+from m5.objects import *
+from m5.params import NULL
+from m5.util import addToPath, fatal, warn
+from gem5.isas import ISA
+# from gem5.runtime import get_runtime_isa
 
 from gem5.components.boards.simple_board import SimpleBoard
 from gem5.components.cachehierarchies.classic.cc_cache_hierarchy import CheckerCacheHierarchy
 from gem5.components.memory.single_channel import SingleChannelDDR3_1600
 from gem5.components.processors.cc_processor import CC_Processor
 from gem5.components.processors.cpu_types import CPUTypes
-from gem5.resources.resource import CustomResource
+from gem5.resources.resource import CustomResource, FileResource
 from gem5.simulate.simulator import Simulator
-from gem5.isas import ISA
 
-def parse_args():
-    """Parse command line arguments"""
+# Import gem5's common options
+# from ../../common.
+
+# from common import Options
+# from common import Simulation
+import Options
+import Simulation
+
+def get_processes(args):
+    """Interprets provided args and returns a list of processes"""
+    multiprocesses = []
+    inputs = []
+    outputs = []
+    errouts = []
+    pargs = []
+
+    workloads = args.cmd.split(";")
+    if args.input != "":
+        inputs = args.input.split(";")
+    if args.output != "":
+        outputs = args.output.split(";")
+    if args.errout != "":
+        errouts = args.errout.split(";")
+    if args.options != "":
+        pargs = args.options.split(";")
+
+    idx = 0
+    for wrkld in workloads:
+        process = Process(pid=100 + idx)
+        process.executable = wrkld
+        process.cwd = os.getcwd()
+        process.gid = os.getgid()
+
+        if args.env:
+            with open(args.env, "r") as f:
+                process.env = [line.rstrip() for line in f]
+
+        if len(pargs) > idx:
+            process.cmd = [wrkld] + pargs[idx].split()
+        else:
+            process.cmd = [wrkld]
+
+        if len(inputs) > idx:
+            process.input = inputs[idx]
+        if len(outputs) > idx:
+            process.output = outputs[idx]
+        if len(errouts) > idx:
+            process.errout = errouts[idx]
+
+        multiprocesses.append(process)
+        idx += 1
+
+    return multiprocesses, 1
+
+def main():
+    # Create the parser
     parser = argparse.ArgumentParser(description="Run SPEC benchmarks with gem5")
+    
+    # Add gem5's common options
+    Options.addCommonOptions(parser)
+    Options.addSEOptions(parser)
+    
+    # Add our custom options
     parser.add_argument("--cmd", type=str, 
                         help="Path to the benchmark executable")
     parser.add_argument("--options", type=str, default="",
@@ -62,17 +130,12 @@ def parse_args():
                         help="Memory size")
     parser.add_argument("--clk-freq", type=str, default="3GHz",
                         help="Clock frequency")
-    return parser.parse_args()
-
-def main():
-    args = parse_args()
     
-    # Static values for the benchmark
-    binary_path = "/home/ay140/spec-2017/cpu2017/benchspec/CPU/605.mcf_s/build/build_base_CLIPPER_TEST-m64.0000/mcf_s"
-    input_file = "/home/ay140/spec-2017/cpu2017/benchspec/CPU/605.mcf_s/run/run_base_refspeed_CLIPPER_TEST-m64.0000/inp.in"
-    output_file = "/home/ay140/spring25/CheckerChip/gem5/_checker/spec_scripts/outputs/out.txt"
-    err_file = "/home/ay140/spring25/CheckerChip/gem5/_checker/spec_scripts/outputs/err.txt"
-    arguments = ["inp.in"]
+    # Parse the arguments
+    args = parser.parse_args()
+    
+    # Get the processes
+    multiprocesses, numThreads = get_processes(args)
     
     # Create the cache hierarchy
     cache_hierarchy = CheckerCacheHierarchy(
@@ -100,20 +163,26 @@ def main():
         cache_hierarchy=cache_hierarchy
     )
     
-    # Create the binary resource using CustomResource
-    binary = CustomResource(binary_path)
-    
     # Set up the workload
-    # board.set_se_binary_workload(
-    #     binary=binary,
-    #     arguments=arguments,
-    #     stdin_file=input_file,
-    #     stdout_file=output_file,
-    #     stderr_file=err_file
-    # )
-    board.set_se_binary_workload(
-        binary
-    )
+    if len(multiprocesses) > 0:
+        process = multiprocesses[0]
+        
+        # Create the binary resource
+        binary = CustomResource(process.executable)
+        
+        # Create the input file resource if needed
+        input_resource = None
+        if process.input:
+            input_resource = FileResource(local_path=process.input)
+        
+        # Set up the workload
+        board.set_se_binary_workload(
+            binary=binary,
+            arguments=process.cmd[1:] if len(process.cmd) > 1 else [],
+            stdin_file=input_resource,
+            stdout_file=Path(process.output) if process.output else None,
+            stderr_file=Path(process.errout) if process.errout else None
+        )
     
     # Create the simulator
     simulator = Simulator(board=board)
@@ -125,5 +194,5 @@ def main():
     # Run the simulation
     simulator.run()
 
-
-main() 
+if __name__ == "__main__":
+    main() 
