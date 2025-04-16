@@ -1,0 +1,1 @@
+`/home/ay140/spring25/CheckerChip/gem5/build/X86/gem5.opt /home/ay140/spring25/CheckerChip/gem5/configs/deprecated/example/spec_trial.py --cmd=../../build/build_base_mytest-m64.0000/lbm_s  --options="2000 reference.dat 0 0 200_200_260_ldc.of" --mem-size=64GiB --maxinsts=1000000`

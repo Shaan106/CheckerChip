@@ -35,13 +35,28 @@ board = SimpleBoard(
     cache_hierarchy=cache_hierarchy,
 )
 
+# # Workload setup
+# process = CustomResource(args.cmd)
+# command = [args.cmd.split("/")[-1]] + args.options.split()
+# board.set_se_binary_workload(
+#     binary=process,
+#     arguments=command
+# )
+
 # Workload setup
-process = CustomResource(args.cmd)
-command = [args.cmd.split("/")[-1]] + args.options.split()
+binary = CustomResource(args.cmd)
+# input_dir = os.path.dirname(args.cmd)  # Get binary directory
+
+# Split arguments WITHOUT including executable name
+command = args.options.split() if args.options else []
+
 board.set_se_binary_workload(
-    binary=process,
+    binary=binary,
     arguments=command
+    # directory=input_dir,  # Set working directory
+    # os_workload=SEBinaryWorkload.X86_LINUX
 )
+
 
 # Simulation control
 simulator = Simulator(board=board)
@@ -49,5 +64,5 @@ simulator.run()
 
 
 '''
-/home/ay140/spring25/CheckerChip/gem5/build/X86/gem5.opt /home/ay140/spring25/CheckerChip/gem5/configs/deprecated/example/spec_trial.py --cmd=../../build/build_base_mytest-m64.0000/lbm_s  --options="2000 reference.dat 0 0 200_200_260_ldc.of" --mem-size=8GB
+/home/ay140/spring25/CheckerChip/gem5/build/X86/gem5.opt /home/ay140/spring25/Checkerip/gem5/configs/deprecated/example/spec_trial.py --cmd=../../build/build_base_mytest-m64.0000/lbm_s  --options="2000 reference.dat 0 0 200_200_260_ldc.of" --mem-size=8GB
 '''

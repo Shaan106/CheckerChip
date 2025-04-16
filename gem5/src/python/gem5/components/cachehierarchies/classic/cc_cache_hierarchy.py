@@ -1,4 +1,3 @@
-
 # Copyright (c) 2022 The Regents of the Yonsei University
 # All rights reserved.
 #
@@ -33,6 +32,7 @@ from m5.objects import (
     L2XBar,
     Port,
     SystemXBar,
+    SnoopFilter,
 )
 
 from ....isas import ISA
@@ -113,7 +113,7 @@ class CheckerCacheHierarchy(
         )
 
         self.membus = membus
-        # self.membus.snoop_filter = SnoopFilter(entries=262144)
+        self.membus.snoop_filter = SnoopFilter(max_capacity="1GiB")  # Set to 1GB capacity
 
     #getting the overall cache hierarchy's memside and cpu side ports
     @overrides(AbstractClassicCacheHierarchy)

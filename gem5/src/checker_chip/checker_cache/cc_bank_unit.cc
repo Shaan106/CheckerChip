@@ -125,6 +125,8 @@ void CC_BankUnit::updateCoreQueues()
             for (auto &packet : coreQueues[senderCoreID]) { // loop over all packets in the core queue
                 if (std::get<2>(packet) == uniqueInstSeqNum) { // if coreQueue[senderCoreID][i].uniqueInstSeqNum == uniqueInstSeqNum
                     std::get<3>(packet) = true; // set isReady to true
+                } else {
+                    DPRINTF(CC_BankedCache, "No corresponding commit for complete (likely early release) coreID: %d, size: %d\n", senderCoreID, coreQueues[senderCoreID].size());                
                 }
                 // std::get<3>(packet) = true; //TODO: only for now
                 
@@ -220,8 +222,16 @@ void CC_BankUnit::retireFromCoreQueue() {
     // loop over all numCores core queues, starting from coreToCheck
     for (int i = 0; i < numCores; i++) {
         currentCore = (coreToCheck + i) % numCores;
-        
-        if (!coreQueues[currentCore].empty()) {
+
+        // deadlock avoiding case - if core queue is full, dispatch the last item to avoid deadlock
+        if (coreQueues[currentCore].size() >= maxCoreQueueSize) {
+            DPRINTF(CC_BankedCache, "Early releasing packet from core queue %d, size: %d\n", currentCore, coreQueues[currentCore].size());                
+            currentPkt = std::get<0>(coreQueues[currentCore].front());
+            coreQueues[currentCore].pop_front();
+            totalCoreQueueSize--;
+            parentCache->cc_dispatchFromCoreQueue(currentPkt);
+            return;
+        } else if (!coreQueues[currentCore].empty()) {
             // DPRINTF(CC_BankedCache, "Checking core queue %d\n", currentCore);
             // DPRINTF(CC_BankedCache, "int i: %d\n", i);
             currentPkt = std::get<0>(coreQueues[currentCore].front());
@@ -235,14 +245,14 @@ void CC_BankUnit::retireFromCoreQueue() {
                 // print current packet seqNum
                 DPRINTF(CC_BankedCache, "Current packet seqNum: %llu\n", std::get<2>(coreQueues[currentCore].front()));
                 // print type of current packet (storeType)
-                CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(currentPkt->senderState);
-                if (cc_packet_state->storeType == StoreType::commit) {
-                    DPRINTF(CC_BankedCache, "Current packet is commit\n");
-                } else if (cc_packet_state->storeType == StoreType::complete) {
-                    DPRINTF(CC_BankedCache, "Current packet is complete\n");
-                } else if (cc_packet_state->storeType == StoreType::non_store) {
-                    DPRINTF(CC_BankedCache, "Current packet is non-store\n");
-                }
+                // CC_PacketState *cc_packet_state = dynamic_cast<CC_PacketState *>(currentPkt->senderState);
+                // if (cc_packet_state->storeType == StoreType::commit) {
+                //     DPRINTF(CC_BankedCache, "Current packet is commit\n");
+                // } else if (cc_packet_state->storeType == StoreType::complete) {
+                //     DPRINTF(CC_BankedCache, "Current packet is complete\n");
+                // } else if (cc_packet_state->storeType == StoreType::non_store) {
+                //     DPRINTF(CC_BankedCache, "Current packet is non-store\n");
+                // }
                 coreQueues[currentCore].pop_front();
                 totalCoreQueueSize--;
                 parentCache->cc_dispatchFromCoreQueue(currentPkt);

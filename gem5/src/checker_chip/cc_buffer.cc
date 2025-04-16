@@ -46,7 +46,7 @@ CC_Buffer::CC_Buffer(const CC_BufferParams &params)
 
       execute_buffer_credits(
                         &cc_buffer_clock,
-                        512, //params.maxCredits, //max_credits
+                        256, //params.maxCredits, //max_credits
                         1, //unsigned long default_latency_add = 1
                         0 //unsigned long default_latency_remove = 0
                         ), // Initialize decode_buffer_credits using   

@@ -27,8 +27,8 @@ class CC_BankUnit
     // num_cores queues for each core.
 
     static const size_t numCores = 8;
-    static const size_t maxMainQueueSize = 64;
-    static const size_t maxCoreQueueSize = 32;
+    static const size_t maxMainQueueSize = 16;
+    static const size_t maxCoreQueueSize = 8;
 
     // total number of packets in core queues (sum of all core queues)
     int totalCoreQueueSize = 0;
